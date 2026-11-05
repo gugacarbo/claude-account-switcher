@@ -1,4 +1,4 @@
-module github.com/SnlperStripes/claude-account-switcher
+module github.com/gugacarbo/claude-account-switcher
 
 go 1.26.0
 

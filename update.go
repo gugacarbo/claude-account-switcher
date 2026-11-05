@@ -20,12 +20,12 @@ import (
 )
 
 const (
-	repoURL = "https://github.com/SnlperStripes/claude-account-switcher"
+	repoURL = "https://github.com/gugacarbo/claude-account-switcher"
 	// GitHub is asked for the latest release at most this often.
 	updateEvery = 24 * time.Hour
 )
 
-var latestAPI = "https://api.github.com/repos/SnlperStripes/claude-account-switcher/releases/latest"
+var latestAPI = "https://api.github.com/repos/gugacarbo/claude-account-switcher/releases/latest"
 
 // latestRelease asks GitHub for the version of the latest release, like "0.3.0".
 // Nothing about the user or their accounts goes along.
@@ -57,10 +57,10 @@ func latestRelease(ctx context.Context) (string, error) {
 	return v, nil
 }
 
-// parseVersion splits "1.2.3" into its numbers, nil when v is not a version.
+// parseVersion splits a dotted numeric version into its numbers, nil when v is not a version.
 func parseVersion(v string) []int {
 	parts := strings.Split(v, ".")
-	if len(parts) != 3 {
+	if len(parts) < 3 {
 		return nil
 	}
 	nums := make([]int, len(parts))

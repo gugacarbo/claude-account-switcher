@@ -4,9 +4,9 @@
 
 <img src="assets/banner.svg" width="880" alt="Claude 账号切换器：一键切换 Claude 桌面端账号，无需邮箱验证码，聊天也会一起带过去。">
 
-[![最新版本](https://img.shields.io/github/v/release/SnlperStripes/claude-account-switcher)](https://github.com/SnlperStripes/claude-account-switcher/releases/latest)
-[![下载次数](https://img.shields.io/github/downloads/SnlperStripes/claude-account-switcher/total)](https://github.com/SnlperStripes/claude-account-switcher/releases)
-[![测试](https://github.com/SnlperStripes/claude-account-switcher/actions/workflows/test.yml/badge.svg)](https://github.com/SnlperStripes/claude-account-switcher/actions/workflows/test.yml)
+[![最新版本](https://img.shields.io/github/v/release/SnlperStripes/claude-account-switcher)](https://github.com/gugacarbo/claude-account-switcher/releases/latest)
+[![下载次数](https://img.shields.io/github/downloads/SnlperStripes/claude-account-switcher/total)](https://github.com/gugacarbo/claude-account-switcher/releases)
+[![测试](https://github.com/gugacarbo/claude-account-switcher/actions/workflows/test.yml/badge.svg)](https://github.com/gugacarbo/claude-account-switcher/actions/workflows/test.yml)
 [![许可证：Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 ![Windows | macOS | Linux](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
@@ -16,9 +16,9 @@
 
 **登录凭证保存在本机。** Token 保留 Claude 原有的加密形式，只会发送到 `api.anthropic.com`。
 
-[![下载 Windows 版](https://img.shields.io/badge/下载_Windows_版-.exe-2ea44f?style=for-the-badge)](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-windows-amd64.exe)
-[![下载 macOS 版](https://img.shields.io/badge/下载_macOS_版-universal-555555?style=for-the-badge)](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-macos)
-[![下载 Linux 版](https://img.shields.io/badge/下载_Linux_版-x64-555555?style=for-the-badge)](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64)
+[![下载 Windows 版](https://img.shields.io/badge/下载_Windows_版-.exe-2ea44f?style=for-the-badge)](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-windows-amd64.exe)
+[![下载 macOS 版](https://img.shields.io/badge/下载_macOS_版-universal-555555?style=for-the-badge)](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-macos)
+[![下载 Linux 版](https://img.shields.io/badge/下载_Linux_版-x64-555555?style=for-the-badge)](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64)
 
 <img src="assets/demo.gif" width="720" alt="演示：5 小时额度用完，从托盘选择另一个账号，Claude 以该账号重启，同一个聊天继续进行">
 
@@ -70,14 +70,14 @@
 
 下载适合你系统的文件并运行即可，无需安装运行时。
 
-- **Windows 10/11：** 下载 [`claude-account-switcher-windows-amd64.exe`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-windows-amd64.exe)。支持 Microsoft Store 版和直接下载安装的 Claude。也可以使用 winget 安装，之后通过 `claude-account-switcher` 启动：
+- **Windows 10/11：** 下载 [`claude-account-switcher-windows-amd64.exe`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-windows-amd64.exe)。支持 Microsoft Store 版和直接下载安装的 Claude。也可以使用 winget 安装，之后通过 `claude-account-switcher` 启动：
 
   ```powershell
   winget install SnlperStripes.ClaudeAccountSwitcher
   ```
 
-- **macOS：** 下载 [`claude-account-switcher-macos`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-macos)，同时支持 Apple Silicon 和 Intel。首次运行会询问一次是否允许读取钥匙串中的“Claude Safe Storage”，这是 Claude 加密登录凭证所用的密钥。macOS 版已通过 CI 构建，但尚未在真实 Mac 上测试，欢迎反馈。
-- **Linux（x64）：** 下载 [`claude-account-switcher-linux-amd64`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64)；ARM64 机器请下载 [`claude-account-switcher-linux-arm64`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-arm64)。需要先安装官方的 Claude 桌面版 Linux 测试版（Ubuntu 22.04+ 或 Debian 12+，从 Anthropic 的 apt 软件源安装，软件包名为 `claude-desktop`，参见 [Claude 的 Linux 指南](https://code.claude.com/docs/en/desktop-linux)）。然后在保存文件的目录执行 `chmod +x claude-account-switcher-linux-amd64`，再启动程序。
+- **macOS：** 下载 [`claude-account-switcher-macos`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-macos)，同时支持 Apple Silicon 和 Intel。首次运行会询问一次是否允许读取钥匙串中的“Claude Safe Storage”，这是 Claude 加密登录凭证所用的密钥。macOS 版已通过 CI 构建，但尚未在真实 Mac 上测试，欢迎反馈。
+- **Linux（x64）：** 下载 [`claude-account-switcher-linux-amd64`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64)；ARM64 机器请下载 [`claude-account-switcher-linux-arm64`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-arm64)。需要先安装官方的 Claude 桌面版 Linux 测试版（Ubuntu 22.04+ 或 Debian 12+，从 Anthropic 的 apt 软件源安装，软件包名为 `claude-desktop`，参见 [Claude 的 Linux 指南](https://code.claude.com/docs/en/desktop-linux)）。然后在保存文件的目录执行 `chmod +x claude-account-switcher-linux-amd64`，再启动程序。
   - 托盘使用 AppIndicator（StatusNotifierItem）协议。Ubuntu 默认桌面和 KDE 开箱即用；原版 GNOME 需要安装 “AppIndicator and KStatusNotifierItem Support” 扩展。
   - 自定义阈值和询问继续哪些聊天的窗口使用 `zenity` 或 `kdialog`，安装其中之一即可。
   - 登录密钥保存在桌面密钥环中（GNOME Keyring 或 KDE Wallet）。查询用量需要密钥环处于解锁状态，通常登录后即已解锁。
@@ -280,10 +280,10 @@ CGO_ENABLED=0 go build -ldflags "-s -w" -o claude-account-switcher .       # Lin
 支持。程序会找到 Store 版的实际数据目录，也支持直接下载安装的版本，适用于 Windows 10 和 11。
 
 **支持 macOS 吗？**
-macOS 通用版本已通过 CI 构建，但尚未在真实 Mac 上测试。欢迎提交 [macOS 测试报告](https://github.com/SnlperStripes/claude-account-switcher/issues/new?template=macos_report.yml)。
+macOS 通用版本已通过 CI 构建，但尚未在真实 Mac 上测试。欢迎提交 [macOS 测试报告](https://github.com/gugacarbo/claude-account-switcher/issues/new?template=macos_report.yml)。
 
 **支持 Linux 吗？**
-已确认可在 Linux 上运行。CI 会构建 Linux x64 和 arm64 版本。需要先安装官方的 Claude 桌面版 Linux 测试版，参见[安装](#安装)。欢迎提交 [Linux 测试报告](https://github.com/SnlperStripes/claude-account-switcher/issues/new?template=linux_report.yml)。
+已确认可在 Linux 上运行。CI 会构建 Linux x64 和 arm64 版本。需要先安装官方的 Claude 桌面版 Linux 测试版，参见[安装](#安装)。欢迎提交 [Linux 测试报告](https://github.com/gugacarbo/claude-account-switcher/issues/new?template=linux_report.yml)。
 
 **会切换终端中的 Claude Code CLI 账号吗？**
 不会。它切换的是 Claude 桌面应用及其中的 Claude Code 聊天；终端中的 `claude` 命令使用独立的登录状态。
@@ -302,8 +302,8 @@ macOS 通用版本已通过 CI 构建，但尚未在真实 Mac 上测试。欢�
 
 欢迎提交问题反馈、建议和 Pull Request，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-如果你有 Mac，欢迎提交 [macOS 测试报告](https://github.com/SnlperStripes/claude-account-switcher/issues/new?template=macos_report.yml)，运行正常的反馈也很有帮助。
-如果你使用 Linux，欢迎提交 [Linux 测试报告](https://github.com/SnlperStripes/claude-account-switcher/issues/new?template=linux_report.yml)，同样有帮助。
+如果你有 Mac，欢迎提交 [macOS 测试报告](https://github.com/gugacarbo/claude-account-switcher/issues/new?template=macos_report.yml)，运行正常的反馈也很有帮助。
+如果你使用 Linux，欢迎提交 [Linux 测试报告](https://github.com/gugacarbo/claude-account-switcher/issues/new?template=linux_report.yml)，同样有帮助。
 
 发现安全问题时，请按 [SECURITY.md](SECURITY.md) 的说明私下报告。
 
