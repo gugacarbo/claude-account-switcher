@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +13,50 @@ import (
 	"testing"
 	"time"
 )
+
+// forkTransport checks the actual outgoing requests without contacting GitHub.
+type forkTransport func(*http.Request) (*http.Response, error)
+
+func (f forkTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestUpdatesStayOnFork(t *testing.T) {
+	bin := []byte("fork release")
+	sum := sha256.Sum256(bin)
+	var paths []string
+	transport := forkTransport(func(r *http.Request) (*http.Response, error) {
+		paths = append(paths, r.URL.String())
+		body := ""
+		switch r.URL.String() {
+		case "https://api.github.com/repos/gugacarbo/claude-account-switcher/releases/latest":
+			body = `{"tag_name":"v0.3.10"}`
+		case "https://github.com/gugacarbo/claude-account-switcher/releases/download/v0.3.10/" + releaseAsset():
+			body = string(bin)
+		case "https://github.com/gugacarbo/claude-account-switcher/releases/download/v0.3.10/" + releaseAsset() + ".sha256":
+			body = hex.EncodeToString(sum[:])
+		default:
+			t.Fatalf("update request outside fork: %s", r.URL)
+		}
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+	})
+	oldClient, oldDownloader := client, downloader
+	t.Cleanup(func() { client, downloader = oldClient, oldDownloader })
+	client = &http.Client{Transport: transport}
+	downloader = &http.Client{Transport: transport}
+	v, err := latestRelease(context.Background())
+	if err != nil || v != "0.3.10" {
+		t.Fatalf("latestRelease = %q, %v", v, err)
+	}
+	got, err := fetchRelease(context.Background(), v)
+	if err != nil || string(got) != string(bin) {
+		t.Fatalf("fetchRelease = %q, %v", got, err)
+	}
+	if len(paths) != 3 {
+		t.Fatalf("requests = %v, want metadata, binary and checksum", paths)
+	}
+	if !newerVersion(v, "0.3.9") {
+		t.Fatal("fork release must be newer than upstream 0.3.9")
+	}
+}
 
 func TestNewerVersion(t *testing.T) {
 	for _, c := range []struct {
