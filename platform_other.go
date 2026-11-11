@@ -3,11 +3,9 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // There is no official Claude desktop app for this platform. These stubs keep
@@ -32,18 +30,6 @@ func decryptValue([]byte) ([]byte, error)  { return nil, errUnsupported }
 func relaunchOutsideDesktop(string) bool { return false }
 func launch(string) error                { return errUnsupported }
 func askToQuitOld()                      {}
-
-func nativeResume(titles []string, _ time.Duration) []bool {
-	keep := make([]bool, len(titles))
-	for i := range keep {
-		keep[i] = true
-	}
-	return keep
-}
-
-func nativeAskNumber(string, string, string) (string, bool) { return "", false }
-
-func showWebDialog(dialogWindow, string) (json.RawMessage, error) { return nil, errUnsupported }
 
 func systemLanguages() []string { return []string{os.Getenv("LANG")} }
 

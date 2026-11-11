@@ -53,6 +53,8 @@ Focused validation: workflow/packaging inspection; run changed integration tests
 
 ## Execution and review
 
+Execution override approved by user: implement directly in the current session because subagents are unavailable. Auto Flash delegation is no longer required. An independent Auto Pro final review remains pending unless the harness becomes usable; do not report self-checks as independent review.
+
 Three sequential units, A -> B -> C, sharing the isolated integration branch. Interface/build/asset overlap makes parallel work inappropriate. Implement/fix model: platon/auto-flash#medium. Unit reviews disabled by user. Final review only: platon/auto-pro#high. Maximum two correction rounds for final validation/review. Keep recovery state outside history under the worktree Git directory.
 
 ## Final validation

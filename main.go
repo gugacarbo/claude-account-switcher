@@ -12,20 +12,11 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"fyne.io/systray"
 )
 
 const version = "0.3.7"
 
 func main() {
-	// The dialog processes started by askInDialogProcess.
-	if len(os.Args) == 2 && os.Args[1] == resumeFlag {
-		os.Exit(runResumeDialog())
-	}
-	if len(os.Args) == 2 && os.Args[1] == thresholdFlag {
-		os.Exit(runThresholdDialog())
-	}
 	status := flag.Bool("status", false, "print accounts and usage, then exit")
 	flag.Parse()
 
@@ -60,16 +51,7 @@ func main() {
 	go removeReplaced()
 
 	log.Printf("claude-account-switcher %s, app data in %s, language %s", version, claudeDesktop().dir, language)
-	t := &tray{s: s, updates: make(chan struct{}, 1)}
-	// When a newer version starts, a running switch finishes first and no new
-	// one begins before this one quits.
-	go serveInstance(lock, func() {
-		for !t.s.busy.CompareAndSwap(false, true) {
-			time.Sleep(200 * time.Millisecond)
-		}
-		systray.Quit()
-	})
-	systray.Run(t.onReady, func() {})
+	runDesktop(s, lock)
 }
 
 // setupLog writes to switcher.log and starts it over once it passes 1 MB.

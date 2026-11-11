@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 )
@@ -270,16 +269,6 @@ func TestParseThreshold(t *testing.T) {
 		if got, ok := parseThreshold(text); ok {
 			t.Errorf("parseThreshold(%q) = %v, want no threshold", text, got)
 		}
-	}
-}
-
-func TestThresholdPageInsertsRequest(t *testing.T) {
-	page, err := fillPage(thresholdPage, thresholdRequest{Threshold: 72, Presets: thresholds, Headroom: autoHeadroom, Lang: "en"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if want := `const data = {"threshold":72,"presets":[90,94,96,98],"headroom":10,"lang":"en"};`; !strings.Contains(page, want) {
-		t.Fatalf("request not inserted in place of the sample data")
 	}
 }
 

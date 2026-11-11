@@ -358,6 +358,11 @@ func (s *switcher) run(what string, f func() error) {
 	if !s.busy.CompareAndSwap(false, true) {
 		return
 	}
+	s.runClaimed(what, f)
+}
+
+// runClaimed completes an operation whose busy flag was acquired by its caller.
+func (s *switcher) runClaimed(what string, f func() error) {
 	err := f()
 	s.busy.Store(false)
 	if err != nil {

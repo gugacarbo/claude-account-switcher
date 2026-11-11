@@ -32,6 +32,13 @@ Unofficial. Not affiliated with or endorsed by Anthropic.
 
 ## The problem
 
+> **New desktop UI:** click the tray icon to open the shared account panel. Settings,
+> custom threshold and resume confirmations open separate windows. The quick panel
+> dismisses on blur; where tray positioning is unavailable it uses a compact window.
+> Closing windows keeps monitoring running; choose **Quit** to exit. Older screenshots
+> below describe the same underlying features but show the previous native menu.
+
+
 You have two Claude accounts because one runs out. Switching between them in the desktop app goes like this:
 
 1. **Sign out.** That throws the sign-in away. Next time you need it, you start from zero.
@@ -77,7 +84,7 @@ Download the file for your platform and run it. No installer, no runtime, one fi
   winget install SnlperStripes.ClaudeAccountSwitcher
   ```
 - **macOS:** [`claude-account-switcher-macos`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-macos) (universal). The first start asks once whether it may read "Claude Safe Storage" from your keychain; that is the key Claude uses to encrypt its sign-in. Builds in CI, not yet tested on a real Mac. Reports welcome.
-- **Linux, x64:** [`claude-account-switcher-linux-amd64`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64). On arm64, use [`claude-account-switcher-linux-arm64`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-arm64) instead. It needs the official Claude Desktop for Linux beta (Ubuntu 22.04+ or Debian 12+, installed from Anthropic's apt repository as `claude-desktop`, see [Claude's Linux guide](https://code.claude.com/docs/en/desktop-linux)). Then run `chmod +x claude-account-switcher-linux-amd64` in the folder you saved it to, and start it.
+- **Linux, x64:** [`claude-account-switcher-linux-amd64`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64). On arm64, use [`claude-account-switcher-linux-arm64`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-arm64) instead. It needs the official Claude Desktop for Linux beta (Ubuntu 24.04+ or Debian 13+, installed from Anthropic's apt repository as `claude-desktop`, see [Claude's Linux guide](https://code.claude.com/docs/en/desktop-linux)). Then run `chmod +x claude-account-switcher-linux-amd64` in the folder you saved it to, and start it.
   - The tray uses the AppIndicator (StatusNotifierItem) protocol. It works on Ubuntu's default desktop and KDE. On plain GNOME, install the "AppIndicator and KStatusNotifierItem Support" extension.
   - The custom threshold and the window that asks which chats continue use `zenity` or `kdialog`, whichever is installed.
   - The sign-in key is kept in the desktop keyring (GNOME Keyring or KDE Wallet). Usage needs the keyring unlocked, which it normally is after login.
@@ -187,7 +194,7 @@ Right before Claude quits, the switcher reads the end of every Claude Code conve
 
 For each chat you keep checked, the switcher writes the mark Claude itself leaves when it quits during a reply (`interruptedByQuitAt`) into that chat's entry of the account you switch to, and removes the mark from the other accounts' copies, so the chat is not continued twice. Claude continues marked chats for 24 hours after the restart; a chat it cannot reach in that time simply stays where it stopped.
 
-On Windows the window is drawn with WebView2, which comes with Windows 11 and current Windows 10. Without it, a plain Windows dialog asks the same question. On macOS it uses WebKit; like the rest of the macOS build, this has not been tested on a real Mac yet. On Linux it is a `zenity` or `kdialog` dialog.
+All platforms use the shared React confirmation window through Wails. Windows uses WebView2, macOS uses system WebKit, and Linux uses WebKitGTK 6.0. There is no zenity/kdialog fallback. The Go backend owns the timeout; closing the window stops all selected resumptions, while an unanswered timeout continues all chats.
 
 </details>
 
@@ -257,16 +264,34 @@ Prints every saved account with its usage and exits.
 
 ## Build
 
-Go 1.26 or newer.
+Go 1.26+ and Bun 1.4.3 are required for development. The desktop UI uses
+**Wails 3.1 + Vite + React + TypeScript**. Bun is not needed by end users.
 
 ```bash
-go test ./...
-go build -ldflags "-H=windowsgui -s -w" -o claude-account-switcher.exe .   # Windows
-CGO_ENABLED=1 go build -o claude-account-switcher .                        # macOS
-CGO_ENABLED=0 go build -ldflags "-s -w" -o claude-account-switcher .       # Linux
+make check
+make build
 ```
 
-Dependencies beyond the standard library: [`fyne.io/systray`](https://github.com/fyne-io/systray) for the tray icon, and for the window that asks which chats continue [`jchv/go-webview2`](https://github.com/jchv/go-webview2) on Windows and [`webview/webview_go`](https://github.com/webview/webview_go) on macOS. On Windows also `golang.org/x/sys`. On Linux [`godbus/dbus`](https://github.com/godbus/dbus) reads the sign-in key from the desktop keyring.
+Equivalent explicit desktop build (after `cd frontend && bun install --frozen-lockfile && bun run build`):
+
+```bash
+go test -tags headless ./...
+go vet -tags headless ./...
+go build -tags "purego production" -o dist/claude-account-switcher .
+# Windows: add -ldflags "-H=windowsgui -s -w" and use an .exe output.
+```
+
+The `purego` backend avoids C build dependencies; it still needs the platform's
+webview at runtime. Linux targets Ubuntu 24.04+ / Debian 13+ with GTK4,
+WebKitGTK 6.0, a desktop session and a working tray host:
+
+```bash
+sudo apt install libgtk-4-1 libwebkitgtk-6.0-4
+```
+
+Windows requires WebView2; macOS uses system WebKit. Core tests/CLI can be built
+with the explicit `headless` tag without frontend assets. This is not the shipped UI.
+See [UI development and platform checks](docs/ui-development.md).
 
 ## FAQ
 
@@ -274,7 +299,7 @@ Dependencies beyond the standard library: [`fyne.io/systray`](https://github.com
 Not on its own. The app holds one sign-in at a time, and switching means signing out and waiting for an email code. The switcher keeps a saved sign-in for every account and swaps between them in about ten seconds.
 
 **How do I switch Claude accounts without signing out?**
-Install the switcher, add each account once with **Add account…**, then pick an account from the tray menu. You never use Sign out again.
+Install the switcher, add each account once with **Add account…**, then pick an account from the account panel. You never use Sign out again.
 
 **What happens to my Claude Code chats when I switch accounts?**
 They come along. The switcher copies the chat list and projects of your other accounts into the one you switch to, so the chat you were in shows up in the sidebar and you can keep going.
