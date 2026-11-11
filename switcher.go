@@ -93,6 +93,9 @@ const (
 	noteFor = 12 * time.Hour
 	// Claude stays closed this long while it asks which stopped chats go on.
 	resumeWait = 30 * time.Second
+	// The switcher keeps the computer awake this long after it starts Claude
+	// again, time for Claude to take its own keep awake back.
+	awakeAfterStart = 2 * time.Minute
 
 	// The usage endpoint rate-limits per account, and Claude polls it too.
 	// The active account is checked more often once it gets close.
@@ -377,9 +380,13 @@ func (s *switcher) run(what string, f func() error) {
 // change fails, the app files are put back as they were.
 func (s *switcher) restart(change func(active string) error) error {
 	restartExe, restartArgs := desktopRestartLaunch()
+	// Claude's keep awake ends when it quits, and a computer that has been
+	// idle long enough would then sleep in the middle of the switch.
+	free := stayAwake()
 	quitAt := time.Now()
 	running := runningChats(projectsDir(), quitAt)
 	if err := quitDesktop(); err != nil {
+		free()
 		return err
 	}
 	s.mu.Lock()
@@ -391,7 +398,10 @@ func (s *switcher) restart(change func(active string) error) error {
 	defer func() {
 		if err := startDesktop(exe, restartArgs...); err != nil {
 			s.setStatus(tr("Could not start Claude: ", "无法启动 Claude：") + err.Error())
+			free()
+			return
 		}
+		time.AfterFunc(awakeAfterStart, free)
 	}()
 	bk, err := backup(s.app(), s.backupsDir())
 	if err != nil {
@@ -408,6 +418,18 @@ func (s *switcher) restart(change func(active string) error) error {
 	}
 	s.askResume(quitAt, running)
 	return err
+}
+
+// stayAwake keeps the computer awake until the returned func is called. If
+// that fails, the switch goes on anyway.
+func stayAwake() func() {
+	free, err := holdAwake("Switching Claude accounts")
+	if err != nil {
+		log.Printf("keep the computer awake: %v", err)
+		return func() {}
+	}
+	var once sync.Once
+	return func() { once.Do(free) }
 }
 
 // askResume lets the user pick which of the chats the quit stopped mid-turn
