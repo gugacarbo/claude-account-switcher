@@ -8,6 +8,19 @@ Thanks for wanting to help. Bug reports, macOS and Linux test runs and pull requ
 - **Run it on Linux.** The Linux builds pass CI but have never run on a real desktop. Open a [Linux test report](https://github.com/SnlperStripes/claude-account-switcher/issues/new?template=linux_report.yml), even if everything worked.
 - **Report breakage after a Claude update.** The switcher depends on how Claude stores its files. When an update changes that, a bug report with the Claude version and a log excerpt is the fastest way to a fix.
 
+## Fork direction and upstream updates
+
+This fork develops independently, with Wails/React presentation and its own
+releases. Treat `origin/main` as canonical. Upstream fixes are reviewed and
+incorporated selectively, not merged automatically. See
+[upstream tracking](docs/upstream-tracking.md) for the policy, reviewed checkpoint,
+and incorporation decisions. Keep source attribution for cherry-picks and ports,
+and update the tracking record in the same PR.
+
+Open issues and pull requests in
+[gugacarbo/claude-account-switcher](https://github.com/gugacarbo/claude-account-switcher),
+not upstream, unless reporting a problem specifically in the original project.
+
 ## Build and test
 
 Go 1.26+ and Bun 1.4.3. See [UI development](docs/ui-development.md).

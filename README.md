@@ -34,6 +34,8 @@ Unofficial. Not affiliated with or endorsed by Anthropic.
 
 This is [gugacarbo's fork](https://github.com/gugacarbo/claude-account-switcher) of [SnlperStripes/claude-account-switcher](https://github.com/SnlperStripes/claude-account-switcher). Version **0.3.10** includes upstream **0.3.9**, plus official Claude Desktop Linux beta support, preservation of Linux launch options, desktop keyring compatibility, and optional import of Claude Code chats from SSH hosts.
 
+This fork follows its own product direction while selectively incorporating useful upstream fixes. See [upstream tracking](docs/upstream-tracking.md) for the policy, reviewed revision, and decisions. Upstream changes are not merged automatically.
+
 Download this fork from [its releases page](https://github.com/gugacarbo/claude-account-switcher/releases). Its automatic updater checks and downloads releases from this fork, not upstream. Release tags use three numeric components (for example, `v0.3.10`); four-component versions such as `v0.3.7.1` are not supported by the updater.
 
 **winget installs upstream, not this fork.** The package `SnlperStripes.ClaudeAccountSwitcher` and the manifests retained under `packaging/winget/` belong to the original project. This fork has no separate winget package; use the downloads below to keep its Linux/SSH features.

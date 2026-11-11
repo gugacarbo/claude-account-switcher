@@ -40,6 +40,8 @@
 
 这是 [gugacarbo 的分支](https://github.com/gugacarbo/claude-account-switcher)，原项目为 [SnlperStripes/claude-account-switcher](https://github.com/SnlperStripes/claude-account-switcher)。**0.3.10** 版本包含上游 **0.3.9**，并增加官方 Claude 桌面版 Linux 测试版支持、保留 Linux 启动参数、桌面密钥环兼容性，以及可选的 SSH 主机 Claude Code 聊天导入功能。
 
+此分支独立发展，并有选择地引入适用的上游修复，不会自动合并上游变更。策略、已审查版本和引入记录见[上游跟踪文档](docs/upstream-tracking.md)。
+
 请从[此分支的发布页面](https://github.com/gugacarbo/claude-account-switcher/releases)下载。自动更新仅检查并下载此分支的版本，不使用上游版本。发布标签使用三个数字部分（例如 `v0.3.10`）；更新器不支持 `v0.3.7.1` 等四部分版本。
 
 **winget 安装的是上游项目，不是此分支。** `SnlperStripes.ClaudeAccountSwitcher` 软件包及 `packaging/winget/` 中保留的清单属于原项目。此分支尚无独立的 winget 软件包；请使用下方下载链接，以保留 Linux/SSH 功能。
