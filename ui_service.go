@@ -225,12 +225,21 @@ func (h *resumeHub) ask(req resumeRequest, wait time.Duration, show func()) []bo
 	timer := time.NewTimer(wait)
 	defer timer.Stop()
 	var keep []bool
+wait:
 	select {
 	case keep = <-answers:
 	case <-timer.C:
-		// Serialize timeout with interaction so an acknowledged pause cannot
-		// race with the automatic continuation decision.
+		// Serialize timeout with answers, cancellation and pause. Both select
+		// cases may be ready: an answer already accepted under this lock must
+		// win instead of being replaced by automatic continuation.
 		h.mu.Lock()
+		select {
+		case keep = <-answers:
+			h.mu.Unlock()
+			break wait
+		default:
+			// No accepted answer; resolve timeout while still holding the lock.
+		}
 		paused := p.Paused
 		if !paused && h.prompt == p {
 			h.prompt = nil

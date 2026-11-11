@@ -199,6 +199,31 @@ func TestResumeInteractionPausesTimeout(t *testing.T) {
 	}
 }
 
+// An accepted answer must win even when the timer is already ready when ask
+// starts waiting. Repeating exercises both choices of Go's select without sleeps.
+func TestResumeAnswerWinsOverReadyTimeout(t *testing.T) {
+	for _, cancel := range []bool{false, true} {
+		t.Run(map[bool]string{false: "answer", true: "cancel"}[cancel], func(t *testing.T) {
+			for range 128 {
+				hub := newResumeHub()
+				got := hub.ask(resumeRequest{Chats: []resumeChat{{Title: "one"}, {Title: "two"}}}, 0, func() {
+					if cancel {
+						hub.cancel()
+					} else if err := hub.answer(hub.snapshot().ID, []bool{false, true}); err != nil {
+						t.Fatal(err)
+					}
+				})
+				if len(got) != 2 || got[0] || got[1] == cancel {
+					t.Fatalf("timeout overrode accepted answer: %v", got)
+				}
+				if hub.snapshot() != nil {
+					t.Fatal("resolved prompt not cleared")
+				}
+			}
+		})
+	}
+}
+
 func TestResumePromptCancelStopsAll(t *testing.T) {
 	hub := newResumeHub()
 	result := make(chan []bool, 1)
