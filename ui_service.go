@@ -6,25 +6,27 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 // UIState is intentionally independent of State: authentication and filesystem
 // details must never become part of the webview's binding surface.
 type UIState struct {
-	Accounts    []UIAccount `json:"accounts"`
-	AutoSwitch  bool        `json:"autoSwitch"`
-	SpendWeekly bool        `json:"spendWeekly"`
-	SSHImport   bool        `json:"sshImport"`
-	Autostart   bool        `json:"autostart"`
-	Threshold   float64     `json:"threshold"`
-	Busy        bool        `json:"busy"`
-	Status      string      `json:"status"`
-	Note        string      `json:"note"`
-	Update      string      `json:"update"`
-	Version     string      `json:"version"`
-	Lang        string      `json:"lang"`
-	Resume      *UIPrompt   `json:"resume"`
+	Accounts         []UIAccount `json:"accounts"`
+	AutoSwitch       bool        `json:"autoSwitch"`
+	SpendWeekly      bool        `json:"spendWeekly"`
+	SSHImport        bool        `json:"sshImport"`
+	Autostart        bool        `json:"autostart"`
+	Threshold        float64     `json:"threshold"`
+	Busy             bool        `json:"busy"`
+	Status           string      `json:"status"`
+	Note             string      `json:"note"`
+	Update           string      `json:"update"`
+	Version          string      `json:"version"`
+	Lang             string      `json:"lang"`
+	Resume           *UIPrompt   `json:"resume"`
+	ThresholdOpening uint64      `json:"thresholdOpening"`
 }
 type UIAccount struct {
 	ID     string `json:"id"`
@@ -37,16 +39,18 @@ type UIAccount struct {
 }
 
 type UIService struct {
-	s       *switcher
-	prompts *resumeHub
-	open    func(string)
-	close   func(string)
-	quit    func()
+	s                *switcher
+	prompts          *resumeHub
+	open             func(string)
+	close            func(string)
+	quit             func()
+	thresholdOpening atomic.Uint64
 }
 
 func (u *UIService) State() UIState {
 	snap := u.s.snapshot()
 	state := UIState{Accounts: []UIAccount{}, AutoSwitch: snap.AutoSwitch, SpendWeekly: snap.SpendWeekly, SSHImport: snap.SSHImport, Threshold: snap.Threshold, Busy: snap.Busy || updating.Load(), Status: snap.Status, Note: snap.Note, Update: snap.Update, Version: version, Lang: language, Autostart: autostartEnabled()}
+	state.ThresholdOpening = u.thresholdOpening.Load()
 	now := time.Now()
 	for _, a := range snap.Accounts {
 		account := UIAccount{ID: a.UUID, Name: a.Name, Email: a.Email, Plan: a.Plan, Active: a.UUID == snap.Active, Detail: usageText(a, snap.Threshold, now)}
@@ -137,6 +141,9 @@ func (u *UIService) OpenWindow(name string) error {
 	if name != "settings" && name != "threshold" {
 		return errors.New("unknown window")
 	}
+	if name == "threshold" {
+		u.thresholdOpening.Add(1)
+	}
 	if u.open != nil {
 		u.open(name)
 	}
@@ -170,11 +177,23 @@ func (u *UIService) AnswerResume(id string, keep []bool) error {
 	return u.prompts.answer(id, keep)
 }
 
+func (u *UIService) PauseResume(id string) error {
+	if u.prompts == nil {
+		return errors.New("no resume prompt")
+	}
+	if err := u.prompts.pause(id); err != nil {
+		return err
+	}
+	u.s.onChange()
+	return nil
+}
+
 type UIPrompt struct {
 	ID       string       `json:"id"`
 	Account  string       `json:"account"`
 	Chats    []resumeChat `json:"chats"`
 	Deadline time.Time    `json:"deadline"`
+	Paused   bool         `json:"paused"`
 }
 type resumeHub struct {
 	mu      sync.Mutex
@@ -209,9 +228,22 @@ func (h *resumeHub) ask(req resumeRequest, wait time.Duration, show func()) []bo
 	select {
 	case keep = <-answers:
 	case <-timer.C:
-		keep = make([]bool, len(req.Chats))
-		for i := range keep {
-			keep[i] = true
+		// Serialize timeout with interaction so an acknowledged pause cannot
+		// race with the automatic continuation decision.
+		h.mu.Lock()
+		paused := p.Paused
+		if !paused && h.prompt == p {
+			h.prompt = nil
+			h.answers = nil
+		}
+		h.mu.Unlock()
+		if paused {
+			keep = <-answers
+		} else {
+			keep = make([]bool, len(req.Chats))
+			for i := range keep {
+				keep[i] = true
+			}
 		}
 	}
 	h.mu.Lock()
@@ -222,6 +254,16 @@ func (h *resumeHub) ask(req resumeRequest, wait time.Duration, show func()) []bo
 	h.mu.Unlock()
 	return keep
 }
+func (h *resumeHub) pause(id string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.prompt == nil || h.prompt.ID != id {
+		return errors.New("resume prompt has expired")
+	}
+	h.prompt.Paused = true
+	return nil
+}
+
 func (h *resumeHub) answer(id string, keep []bool) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()

@@ -134,6 +134,71 @@ func TestUIQuitReservesBusyBeforeShutdown(t *testing.T) {
 	}
 }
 
+func TestThresholdOpeningDiscardsPreviousDraft(t *testing.T) {
+	s := newSwitcher(t.TempDir())
+	ui := &UIService{s: s}
+	before := ui.State().ThresholdOpening
+	for range 2 {
+		if err := ui.OpenWindow("threshold"); err != nil {
+			t.Fatal(err)
+		}
+		next := ui.State()
+		if next.ThresholdOpening <= before || next.Threshold != 96 {
+			t.Fatalf("opening must reset the draft without changing the setting: %+v", next)
+		}
+		before = next.ThresholdOpening
+	}
+}
+
+func TestResumeInteractionPausesTimeout(t *testing.T) {
+	for _, cancel := range []bool{false, true} {
+		t.Run(map[bool]string{false: "selection", true: "cancel"}[cancel], func(t *testing.T) {
+			hub := newResumeHub()
+			ui := &UIService{s: newSwitcher(t.TempDir()), prompts: hub}
+			ready := make(chan struct{})
+			result := make(chan []bool, 1)
+			go func() {
+				result <- hub.ask(resumeRequest{Chats: []resumeChat{{Title: "one"}, {Title: "two"}}}, 30*time.Millisecond, func() { close(ready) })
+			}()
+			<-ready
+			p := hub.snapshot()
+			if err := ui.PauseResume("stale"); err == nil {
+				t.Fatal("accepted stale pause")
+			}
+			if err := ui.PauseResume(p.ID); err != nil {
+				t.Fatal(err)
+			}
+			if !ui.State().Resume.Paused {
+				t.Fatal("pause not visible to the frontend")
+			}
+			if err := ui.PauseResume(p.ID); err != nil {
+				t.Fatalf("repeated interaction must be safe: %v", err)
+			}
+			select {
+			case got := <-result:
+				t.Fatalf("interaction must prevent automatic continuation: %v", got)
+			case <-time.After(60 * time.Millisecond):
+			}
+			if cancel {
+				hub.cancel()
+			} else if err := ui.AnswerResume(p.ID, []bool{false, true}); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case got := <-result:
+				if len(got) != 2 || got[0] || got[1] == cancel {
+					t.Fatalf("answer after pause = %v", got)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("paused prompt did not finish")
+			}
+			if err := ui.PauseResume(p.ID); err == nil {
+				t.Fatal("accepted expired pause")
+			}
+		})
+	}
+}
+
 func TestResumePromptCancelStopsAll(t *testing.T) {
 	hub := newResumeHub()
 	result := make(chan []bool, 1)

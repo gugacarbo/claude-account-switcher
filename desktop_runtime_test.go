@@ -26,7 +26,7 @@ func TestDesktopServiceBindingIDs(t *testing.T) {
 	if _, err := method.Call(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}
-	if bindings.GetByID(12) == nil || bindings.GetByID(13) != nil {
+	if bindings.GetByID(12) == nil || bindings.GetByID(13) == nil || bindings.GetByID(14) != nil {
 		t.Fatal("binding allowlist changed")
 	}
 }

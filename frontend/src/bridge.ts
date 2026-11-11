@@ -19,6 +19,7 @@ export interface Prompt {
   account: string;
   chats: { title: string; folder: string }[];
   deadline: string;
+  paused: boolean;
 }
 export interface UIState {
   accounts: Account[];
@@ -27,6 +28,7 @@ export interface UIState {
   sshImport: boolean;
   autostart: boolean;
   threshold: number;
+  thresholdOpening: number;
   busy: boolean;
   status: string;
   note: string;
@@ -72,6 +74,7 @@ const methods: Record<string, number> = {
   CloseWindow: 10,
   Quit: 11,
   AnswerResume: 12,
+  PauseResume: 13,
 };
 export const desktopBridge: Bridge = {
   state: async () =>

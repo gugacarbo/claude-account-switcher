@@ -41,6 +41,7 @@ const state: UIState = {
   sshImport: false,
   autostart: false,
   threshold: 96,
+  thresholdOpening: 0,
   busy: false,
   status: "",
   note: "",
@@ -106,10 +107,14 @@ describe("shared desktop UI", () => {
         account: "Ada",
         chats: [{ title: "Build app", folder: "app" }],
         deadline: new Date(Date.now() + 30000).toISOString(),
+        paused: false,
       },
     });
     render(<App bridge={api} view="resume" />);
     fireEvent.click(await screen.findByRole("checkbox", { name: /Build app/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: /Build app/ })).not.toBeChecked(),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Continue selected" }));
     await waitFor(() =>
       expect(api.call).toHaveBeenCalledWith("AnswerResume", "p", [false]),

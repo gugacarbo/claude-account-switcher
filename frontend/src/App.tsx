@@ -117,7 +117,7 @@ export function App({
             <Settings state={state} t={t} disabled={disabled} act={act} />
           ) : view === "threshold" ? (
             <Threshold
-              key={state.threshold}
+              key={`${state.thresholdOpening}:${state.threshold}`}
               state={state}
               t={t}
               disabled={disabled}
@@ -601,9 +601,15 @@ function Resume({
             <input
               type="checkbox"
               checked={keep[i]}
-              onChange={(e) =>
-                setKeep(keep.map((v, j) => (j === i ? e.target.checked : v)))
-              }
+              disabled={disabled}
+              onChange={async (e) => {
+                const checked = e.target.checked;
+                if (p.paused || (await act("PauseResume", p.id))) {
+                  setKeep((values) =>
+                    values.map((v, j) => (j === i ? checked : v)),
+                  );
+                }
+              }}
             />
             <span>
               <strong>{c.title}</strong>
@@ -613,22 +619,24 @@ function Resume({
         ))}
       </section>
       <p className="fine-print" role="status">
-        {t(
-          `All chats continue automatically in ${seconds}s if you do not answer.`,
-          `若未作选择，所有对话将在 ${seconds} 秒后自动继续。`,
-        )}
+        {p.paused
+          ? t("Waiting for you", "等你选择")
+          : t(
+              `All chats continue automatically in ${seconds}s if you do not answer.`,
+              `若未作选择，所有对话将在 ${seconds} 秒后自动继续。`,
+            )}
       </p>
       <div className="actions">
         <button
           className="secondary"
-          disabled={disabled || seconds === 0}
+          disabled={disabled || (!p.paused && seconds === 0)}
           onClick={() => answer(p.chats.map(() => false))}
         >
           {t("Don’t continue", "不继续")}
         </button>
         <button
           className="primary"
-          disabled={disabled || seconds === 0}
+          disabled={disabled || (!p.paused && seconds === 0)}
           onClick={() => answer(keep)}
         >
           {t("Continue selected", "继续选中的对话")}

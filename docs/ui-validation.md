@@ -38,8 +38,9 @@ selection/cancel/timeout/stale-answer behavior, asset serving and stable binding
   disposable accounts on each OS. No real credentials were switched for tests.
 - Visual dark-mode, Chinese and keyboard/accessibility acceptance across native
   webviews; automated tests and shared CSS do not replace those checks.
-- Independent final Auto Pro review: unavailable because subagent dispatch was
-  not functioning. Direct implementation was explicitly requested instead.
+- Native platform acceptance remains separate from the direct Auto Pro PR review
+  and the targeted review corrections documented below; subagent dispatch was
+  unavailable, so no multi-reviewer assessment is claimed.
 
 ## Quick-switch tray menu follow-up
 
@@ -52,6 +53,26 @@ Passed `make check`, `make build`, `go vet -tags purego ./...`,
 `go test -race -tags purego ./...`, and purego production cross-compilation for
 Windows amd64 and macOS arm64. Native host rendering and real-account switching
 were not exercised for this follow-up.
+
+## PR review corrections
+
+The direct PR review identified two regressions, now covered by tests:
+
+- Changing a resume checkbox pauses automatic continuation in Go. A paused
+  prompt remains answerable after its original deadline, cancellation still
+  stops all chats, and an untouched prompt still continues all on timeout.
+  Stale pause requests are rejected; the pause/timeout decision is serialized.
+- Each threshold-window opening carries a new presentation revision, resetting
+  cancelled or native-closed drafts to the persisted value. Background state
+  updates do not erase an in-progress edit.
+
+Validation after the fixes: `make check` (now 9 frontend tests), `make build`,
+`go vet -tags purego ./...`, `go test -race -tags purego ./...`, and the
+`desktop_smoke` test. The real disposable Linux JS -> Go smoke also checks the
+threshold opening revision, pause binding/state and selected resume answer.
+Production cross-compilation was also repeated for Windows amd64 and macOS
+arm64 with `CGO_ENABLED=0` and tags `purego production`. No real account workers
+or credentials were used. Windows/macOS native runtime acceptance remains pending.
 
 ## Known non-blocking tooling warning
 
