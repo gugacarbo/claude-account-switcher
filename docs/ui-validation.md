@@ -74,6 +74,30 @@ Production cross-compilation was also repeated for Windows amd64 and macOS
 arm64 with `CGO_ENABLED=0` and tags `purego production`. No real account workers
 or credentials were used. Windows/macOS native runtime acceptance remains pending.
 
+## Integration with current main and timeout-boundary correction
+
+Integrated main through `4ed34e3`, preserving the fork updater and version
+0.3.10, `/clear` session synchronization, and keep-awake behavior during account
+switching. README conflicts were resolved by retaining fork download/winget
+ownership information together with Wails build/runtime requirements.
+
+An additional regression test reproduced accepted resume answers and native-close
+cancellations being overridden when the timeout was also ready. Timeout handling
+now checks for an accepted answer under the same mutex used by answer/cancel and
+pause. Both answer/cancel cases failed before the fix and pass afterward.
+
+Validation repeated on the integrated branch:
+
+- `make check` (9 frontend tests), `make build`.
+- `go test -race -tags purego ./...`, `go vet -tags purego ./...`.
+- Production cross-compilation with `CGO_ENABLED=0`, tags `purego production`,
+  for Windows amd64, macOS arm64/amd64, and Linux arm64.
+- `go test -tags 'purego desktop_smoke' -run TestDesktopBridgeSmoke -v`:
+  passed against the actual disposable Linux webview and JS-to-Go bridge.
+
+No real accounts or account-switching workers were used. The pending native
+acceptance checklist above remains applicable.
+
 ## Known non-blocking tooling warning
 
 Vitest resolves a newer internal Vite while the app build uses Vite 7.3.8;
