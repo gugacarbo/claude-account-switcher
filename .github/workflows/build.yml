@@ -20,11 +20,11 @@ jobs:
           - os: macos-latest
             out: claude-account-switcher-macos
             flags: -s -w
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             out: claude-account-switcher-linux-amd64
             goarch: amd64
             flags: -s -w
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             out: claude-account-switcher-linux-arm64
             goarch: arm64
             flags: -s -w
@@ -34,8 +34,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - run: go vet ./...
-      - run: go test ./...
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - name: Frontend
+        working-directory: frontend
+        run: bun install --frozen-lockfile && bun run typecheck && bun run test && bun run build
+      - run: go vet -tags headless ./...
+      - run: go test -tags headless ./...
       # Version info and a manifest make an unsigned exe look less like
       # malware to Windows Defender's machine learning.
       - name: Windows resources
@@ -49,14 +55,14 @@ jobs:
         run: |
           mkdir -p dist
           if [ "$RUNNER_OS" = macOS ]; then
-            CGO_ENABLED=1 GOARCH=arm64 go build -ldflags "${{ matrix.flags }}" -o dist/arm64 .
-            CGO_ENABLED=1 GOARCH=amd64 go build -ldflags "${{ matrix.flags }}" -o dist/amd64 .
+            CGO_ENABLED=1 GOARCH=arm64 go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o dist/arm64 .
+            CGO_ENABLED=1 GOARCH=amd64 go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o dist/amd64 .
             lipo -create -output "dist/${{ matrix.out }}" dist/arm64 dist/amd64
             rm dist/arm64 dist/amd64
           elif [ "$RUNNER_OS" = Linux ]; then
-            CGO_ENABLED=0 GOOS=linux GOARCH="${{ matrix.goarch }}" go build -ldflags "${{ matrix.flags }}" -o "dist/${{ matrix.out }}" .
+            CGO_ENABLED=0 GOOS=linux GOARCH="${{ matrix.goarch }}" go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o "dist/${{ matrix.out }}" .
           else
-            go build -ldflags "${{ matrix.flags }}" -o "dist/${{ matrix.out }}" .
+            go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o "dist/${{ matrix.out }}" .
           fi
           cd dist && { sha256sum "${{ matrix.out }}" 2>/dev/null || shasum -a 256 "${{ matrix.out }}"; } > "${{ matrix.out }}.sha256"
       - uses: actions/upload-artifact@v4

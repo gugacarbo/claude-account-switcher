@@ -10,24 +10,27 @@ Thanks for wanting to help. Bug reports, macOS and Linux test runs and pull requ
 
 ## Build and test
 
-Go 1.26 or newer.
+Go 1.26+ and Bun 1.4.3. See [UI development](docs/ui-development.md).
 
 ```bash
-go vet ./...
-go test ./...
-go build -ldflags "-H=windowsgui -s -w" -o claude-account-switcher.exe .   # Windows
-CGO_ENABLED=1 go build -o claude-account-switcher .                        # macOS
-CGO_ENABLED=0 go build -ldflags "-s -w" -o claude-account-switcher .       # Linux
+make check
+make build
+# With runtime GTK/WebKit installed, also validate the actual desktop-linked tests:
+go test -tags purego ./...
 ```
 
-Every pull request runs vet and tests on Windows, macOS and Linux.
+CI builds the frontend and compiles the desktop target on Windows, macOS and
+Ubuntu 24.04. Native execution and tray behavior still need manual testing.
 
 ## Where things are
 
 | File | What it does |
 | --- | --- |
 | `main.go` | Start-up, flags, log |
-| `tray.go` | The tray menu |
+| `desktop_runtime.go` | Wails tray, windows and lifecycle |
+| `ui_service.go` | Safe frontend state/actions and resume coordinator |
+| `frontend/src/` | Shared React interface, styles and tests |
+| `tray.go` | Localized usage formatting |
 | `switcher.go` | Accounts, `state.json`, the switch itself, auto-switch |
 | `profiles.go` | Saving and restoring a sign-in, backups |
 | `sessions.go` | Copying the Claude Code chat list between accounts |

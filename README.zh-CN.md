@@ -1,5 +1,13 @@
 <div align="center">
 
+> **新版桌面界面：** 使用 Wails + Vite + React + TypeScript，Bun 管理前端依赖。
+> 点击托盘图标打开账号面板；设置、阈值和继续聊天在独立窗口中显示。
+> 无法定位托盘时使用紧凑窗口。关闭窗口不会退出，只有“退出”会停止应用。
+> Linux 最低为 Ubuntu 24.04 / Debian 13，需要 `libgtk-4-1` 和
+> `libwebkitgtk-6.0-4`，不再使用 zenity/kdialog。开发使用 `make check` / `make build`；
+> 下方旧截图和旧版构建说明仅供历史参考，以 [新版开发说明](docs/ui-development.md) 为准。
+
+
 [English](README.md) | 简体中文
 
 <img src="assets/banner.svg" width="880" alt="Claude 账号切换器：一键切换 Claude 桌面端账号，无需邮箱验证码，聊天也会一起带过去。">
@@ -85,9 +93,9 @@
   ```
 
 - **macOS：** 下载 [`claude-account-switcher-macos`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-macos)，同时支持 Apple Silicon 和 Intel。首次运行会询问一次是否允许读取钥匙串中的“Claude Safe Storage”，这是 Claude 加密登录凭证所用的密钥。macOS 版已通过 CI 构建，但尚未在真实 Mac 上测试，欢迎反馈。
-- **Linux（x64）：** 下载 [`claude-account-switcher-linux-amd64`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64)；ARM64 机器请下载 [`claude-account-switcher-linux-arm64`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-arm64)。需要先安装官方的 Claude 桌面版 Linux 测试版（Ubuntu 22.04+ 或 Debian 12+，从 Anthropic 的 apt 软件源安装，软件包名为 `claude-desktop`，参见 [Claude 的 Linux 指南](https://code.claude.com/docs/en/desktop-linux)）。然后在保存文件的目录执行 `chmod +x claude-account-switcher-linux-amd64`，再启动程序。
+- **Linux（x64）：** 下载 [`claude-account-switcher-linux-amd64`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64)；ARM64 机器请下载 [`claude-account-switcher-linux-arm64`](https://github.com/gugacarbo/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-arm64)。需要先安装官方的 Claude 桌面版 Linux 测试版（Ubuntu 24.04+ 或 Debian 13+，从 Anthropic 的 apt 软件源安装，软件包名为 `claude-desktop`，参见 [Claude 的 Linux 指南](https://code.claude.com/docs/en/desktop-linux)）。然后在保存文件的目录执行 `chmod +x claude-account-switcher-linux-amd64`，再启动程序。
   - 托盘使用 AppIndicator（StatusNotifierItem）协议。Ubuntu 默认桌面和 KDE 开箱即用；原版 GNOME 需要安装 “AppIndicator and KStatusNotifierItem Support” 扩展。
-  - 自定义阈值和询问继续哪些聊天的窗口使用 `zenity` 或 `kdialog`，安装其中之一即可。
+  - 共享界面需要 GTK4 和 WebKitGTK 6.0：`sudo apt install libgtk-4-1 libwebkitgtk-6.0-4`，不再使用 `zenity` 或 `kdialog`。
   - 登录密钥保存在桌面密钥环中（GNOME Keyring 或 KDE Wallet）。查询用量需要密钥环处于解锁状态，通常登录后即已解锁。
   - 已确认可在 Linux 上运行，欢迎反馈其他环境的使用情况。
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"slices"
-	"strings"
 	"testing"
 	"time"
 )
@@ -92,17 +91,5 @@ func TestCustomLabelChinese(t *testing.T) {
 	}
 	if got := customLabel(85); got != "自定义（85%）…" {
 		t.Fatalf("got %q", got)
-	}
-}
-
-// The dialog pages get the language with their data.
-func TestDialogRequestsCarryLanguage(t *testing.T) {
-	inChinese(t)
-	page, err := fillPage(thresholdPage, thresholdRequest{Threshold: 85, Presets: thresholds, Lang: language})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(page, `"lang":"zh-CN"`) {
-		t.Fatal("threshold page lacks the language")
 	}
 }

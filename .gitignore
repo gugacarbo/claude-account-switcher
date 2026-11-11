@@ -2,3 +2,6 @@
 /claude-account-switcher
 /dist/
 *.syso
+/frontend/node_modules/
+/frontend/dist/
+/.playwright-mcp/

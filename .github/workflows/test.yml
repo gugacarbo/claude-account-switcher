@@ -13,12 +13,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - run: go vet ./...
-      - run: go test ./...
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - name: Frontend checks
+        working-directory: frontend
+        run: bun install --frozen-lockfile && bun run typecheck && bun run test && bun run build
+      - run: go vet -tags headless ./...
+      - run: go test -tags headless ./...
+      - name: Desktop compile
+        run: go build -tags "purego production" -o desktop-check .
