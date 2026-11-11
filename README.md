@@ -35,7 +35,8 @@ Unofficial. Not affiliated with or endorsed by Anthropic.
 > **New desktop UI:** click the tray icon to open the shared account panel. Settings,
 > custom threshold and resume confirmations open separate windows. The quick panel
 > dismisses on blur; where tray positioning is unavailable it uses a compact window.
-> Closing windows keeps monitoring running; choose **Quit** to exit. Older screenshots
+> The tray menu also offers quick switching by email, with the active account and
+> 5-hour/weekly usage shown. Closing windows keeps monitoring running; choose **Quit** to exit. Older screenshots
 > below describe the same underlying features but show the previous native menu.
 
 
@@ -77,7 +78,7 @@ The first real run, on Windows 11 with the Microsoft Store version of Claude, fr
 
 ## Install
 
-Download the file for your platform and run it. No installer, no runtime, one file.
+Download the file for your platform and run it. No installer or Bun is needed; the system webview runtime is required.
 
 - **Windows 10/11:** [`claude-account-switcher-windows-amd64.exe`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-windows-amd64.exe). Works with the Microsoft Store app and the direct download. Or install it with winget and start it with `claude-account-switcher`:
   ```
@@ -86,7 +87,7 @@ Download the file for your platform and run it. No installer, no runtime, one fi
 - **macOS:** [`claude-account-switcher-macos`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-macos) (universal). The first start asks once whether it may read "Claude Safe Storage" from your keychain; that is the key Claude uses to encrypt its sign-in. Builds in CI, not yet tested on a real Mac. Reports welcome.
 - **Linux, x64:** [`claude-account-switcher-linux-amd64`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-amd64). On arm64, use [`claude-account-switcher-linux-arm64`](https://github.com/SnlperStripes/claude-account-switcher/releases/latest/download/claude-account-switcher-linux-arm64) instead. It needs the official Claude Desktop for Linux beta (Ubuntu 24.04+ or Debian 13+, installed from Anthropic's apt repository as `claude-desktop`, see [Claude's Linux guide](https://code.claude.com/docs/en/desktop-linux)). Then run `chmod +x claude-account-switcher-linux-amd64` in the folder you saved it to, and start it.
   - The tray uses the AppIndicator (StatusNotifierItem) protocol. It works on Ubuntu's default desktop and KDE. On plain GNOME, install the "AppIndicator and KStatusNotifierItem Support" extension.
-  - The custom threshold and the window that asks which chats continue use `zenity` or `kdialog`, whichever is installed.
+  - The shared interface needs GTK4 and WebKitGTK 6.0: `sudo apt install libgtk-4-1 libwebkitgtk-6.0-4`. It no longer uses `zenity` or `kdialog`.
   - The sign-in key is kept in the desktop keyring (GNOME Keyring or KDE Wallet). Usage needs the keyring unlocked, which it normally is after login.
   - Confirmed working on Linux. Reports from other setups are welcome.
 

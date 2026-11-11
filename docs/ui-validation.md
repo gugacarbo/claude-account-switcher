@@ -41,6 +41,18 @@ selection/cancel/timeout/stale-answer behavior, asset serving and stable binding
 - Independent final Auto Pro review: unavailable because subagent dispatch was
   not functioning. Direct implementation was explicitly requested instead.
 
+## Quick-switch tray menu follow-up
+
+Added direct account actions to the native menu, with email, active marker and
+compact 5-hour/weekly percentages. Tests cover current usage after resets, action
+ID routing, error reporting, disabled busy/update actions, missing usage/problems,
+and native-menu rebuilding after account/active-state changes.
+
+Passed `make check`, `make build`, `go vet -tags purego ./...`,
+`go test -race -tags purego ./...`, and purego production cross-compilation for
+Windows amd64 and macOS arm64. Native host rendering and real-account switching
+were not exercised for this follow-up.
+
 ## Known non-blocking tooling warning
 
 Vitest resolves a newer internal Vite while the app build uses Vite 7.3.8;

@@ -67,12 +67,7 @@ func runDesktop(s *switcher, lock net.Listener) {
 	}
 	tray.OnClick(showPanel)
 	menu := app.NewMenu()
-	menu.Add(tr("Open", "打开")).OnClick(func(*application.Context) { showPanel() })
-	menu.Add(tr("Quit", "退出")).OnClick(func(*application.Context) {
-		if err := service.Quit(); err != nil {
-			s.setStatus(err.Error())
-		}
-	})
+	updateTrayMenu(menu, s.snapshot(), updating.Load(), time.Now(), service, showPanel)
 	tray.SetMenu(menu)
 	service.open = func(name string) { panel.Hide(); windows[name].Show().Focus(); app.Event.Emit("state-changed") }
 	service.close = func(name string) { windows[name].Hide() }
@@ -120,6 +115,10 @@ func runDesktop(s *switcher, lock net.Listener) {
 							}
 						}
 						tray.SetIcon(trayIcon(pct, snap.Threshold))
+						application.InvokeSync(func() {
+							updateTrayMenu(menu, snap, updating.Load(), time.Now(), service, showPanel)
+							tray.SetMenu(menu)
+						})
 						app.Event.Emit("state-changed")
 					}
 				}

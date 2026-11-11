@@ -13,7 +13,10 @@ JavaScript. Fixed command IDs in `ui_bindings.go` / `frontend/src/bridge.ts` for
 the small bridge surface. Do not bind switcher or filesystem helpers directly.
 
 `desktop_runtime.go` manages one background app, tray, quick panel and reusable
-settings/threshold/resume windows. Native menu entries are only Open and Quit.
+settings/threshold/resume windows. The native tray menu also lists accounts by
+email with an active marker and compact 5-hour/weekly usage percentages. Other
+accounts can be switched directly; switching is disabled during an operation or
+update. Menu rows refresh with backend state, alongside Open and Quit.
 The frontend is embedded from `frontend/dist`; build it before Go compilation.
 `background.go` retains existing polling, automatic switches, update checks and
 SSH scheduling. Resume deadlines live in Go, not in a throttled browser timer.
