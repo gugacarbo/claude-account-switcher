@@ -29,6 +29,8 @@ Install `golangci-lint` v2, `gitleaks`, and `govulncheck` on PATH for the comple
 
 Use tests before behavioral changes. Keep the Go policy pure and pass an explicit time. Use temporary directories for persistence tests and mock bridges for UI tests. Never validate a refactor by switching a real account.
 
-`TestUIContract` protects stable command IDs, not all DTO fields. Update the Go presentation models, TypeScript types and fixtures together. Keep feature imports within the same feature or shared modules. App is the composition boundary.
+`bun run check:contract` protects command IDs and generated DTO types. After intentional Go presentation changes, run `bun run generate:contract` and review the generated diff. Keep feature imports within the same feature or shared modules. App is the composition boundary.
 
-Storybook and screenshot regression tests are not installed yet. Existing component tests are behavioral tests, not visual approval. Native runtime and platform release smoke tests still require their target operating systems.
+Run `bun run storybook` for the component catalog or `bun run build:storybook` for a static build. Install Chromium with `bunx playwright install chromium` from `frontend`, then run `bun run test:visual`. References are Linux-specific; regenerate intentionally with `bun run test:visual:update`, inspect every changed image, and include references with the UI change. CI never updates references. Behavior tests remain separate from screenshot comparisons.
+
+The executable package is `./cmd/claude-account-switcher`; application tests are under `./internal/app`. The opt-in native check is `go test -tags 'purego production desktop_smoke' -run TestDesktopBridgeSmoke -count=1 -timeout 60s ./internal/app`. It requires a working target-platform desktop session. Windows and macOS CI execute it after building the frontend; verify remote results after publishing.

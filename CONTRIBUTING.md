@@ -39,17 +39,17 @@ Ubuntu 24.04. Native execution and tray behavior still need manual testing.
 
 | File | What it does |
 | --- | --- |
-| `main.go` | Start-up, flags, log |
-| `desktop_runtime.go` | Wails tray, windows and lifecycle |
-| `ui_service.go` | Safe frontend state/actions and resume coordinator |
+| `internal/app/main.go` | Start-up, flags, log |
+| `internal/app/desktop_runtime.go` | Wails tray, windows and lifecycle |
+| `internal/app/ui_service.go` | Safe frontend state/actions and resume coordinator |
 | `frontend/src/` | Shared React interface, styles and tests |
 | `tray.go` | Localized usage formatting |
-| `switcher.go` | Accounts, `state.json`, the switch itself, auto-switch |
-| `profiles.go` | Saving and restoring a sign-in, backups |
-| `sessions.go` | Copying the Claude Code chat list between accounts |
-| `usage.go` | Profile and usage requests to `api.anthropic.com`, polling, backoff |
-| `update.go` | The daily check for a new release on GitHub |
-| `desktop.go` | Reading Claude's data folder: `config.json`, cookies, the active account |
+| `internal/app/switcher.go` | Accounts, `state.json`, the switch itself, auto-switch |
+| `internal/app/profiles.go` | Saving and restoring a sign-in, backups |
+| `internal/app/sessions.go` | Copying the Claude Code chat list between accounts |
+| `internal/app/usage.go` | Profile and usage requests to `api.anthropic.com`, polling, backoff |
+| `internal/app/update.go` | The daily check for a new release on GitHub |
+| `internal/app/desktop.go` | Reading Claude's data folder: `config.json`, cookies, the active account |
 | `crypto_*.go` | Decrypting Claude's token cache (DPAPI, keychain) |
 | `platform_*.go` | Finding, quitting and starting Claude, start at login, OS specifics |
 | `icon.go` | The usage ring in the tray |

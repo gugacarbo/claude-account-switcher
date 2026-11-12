@@ -288,7 +288,7 @@ Equivalent explicit desktop build (after `cd frontend && bun install --frozen-lo
 ```bash
 go test -tags headless ./...
 go vet -tags headless ./...
-go build -tags "purego production" -o dist/claude-account-switcher .
+go build -tags "purego production" -o dist/claude-account-switcher ./cmd/claude-account-switcher
 # Windows: add -ldflags "-H=windowsgui -s -w" and use an .exe output.
 ```
 

@@ -275,9 +275,9 @@ claude-account-switcher -status
 ```bash
 go vet ./...
 go test ./...
-go build -ldflags "-H=windowsgui -s -w" -o claude-account-switcher.exe .   # Windows
-CGO_ENABLED=1 go build -o claude-account-switcher .                        # macOS
-CGO_ENABLED=0 go build -ldflags "-s -w" -o claude-account-switcher .       # Linux
+go build -ldflags "-H=windowsgui -s -w" -o claude-account-switcher.exe ./cmd/claude-account-switcher   # Windows
+CGO_ENABLED=1 go build -o claude-account-switcher ./cmd/claude-account-switcher                        # macOS
+CGO_ENABLED=0 go build -ldflags "-s -w" -o claude-account-switcher ./cmd/claude-account-switcher       # Linux
 ```
 
 标准库之外的依赖：[`fyne.io/systray`](https://github.com/fyne-io/systray) 提供托盘图标；询问继续哪些聊天的窗口在 Windows 上使用 [`jchv/go-webview2`](https://github.com/jchv/go-webview2)，在 macOS 上使用 [`webview/webview_go`](https://github.com/webview/webview_go)。Windows 还使用 `golang.org/x/sys`。Linux 上使用 [`godbus/dbus`](https://github.com/godbus/dbus) 从桌面密钥环读取登录密钥。

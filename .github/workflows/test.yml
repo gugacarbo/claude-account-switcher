@@ -48,4 +48,7 @@ jobs:
       - run: go vet -tags headless ./...
       - run: go test -tags headless ./...
       - name: Desktop compile
-        run: go build -tags "purego production" -o desktop-check .
+        run: go build -tags "purego production" -o desktop-check ./cmd/claude-account-switcher
+      - name: Native desktop bridge smoke
+        if: runner.os != 'Linux'
+        run: go test -tags "purego production desktop_smoke" -run TestDesktopBridgeSmoke -count=1 -timeout 60s ./internal/app

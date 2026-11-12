@@ -10,7 +10,7 @@ check:
 
 # purego avoids a C compiler/pkg-config at build time. Linux still needs GTK/WebKit at runtime.
 build: frontend
-	go build -tags "purego production" -trimpath -o dist/claude-account-switcher .
+	go build -tags "purego production" -trimpath -o dist/claude-account-switcher ./cmd/claude-account-switcher
 
 dev: frontend
 	bun run dev

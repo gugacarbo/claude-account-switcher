@@ -6,9 +6,12 @@
     "includes": [
       "frontend/src/**",
       "frontend/*.ts",
+      "frontend/.storybook/**",
+      "frontend/visual/**",
       "*.json",
       "scripts/**",
-      "!**/dist"
+      "!**/dist",
+      "!frontend/src/contracts.generated.ts"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },

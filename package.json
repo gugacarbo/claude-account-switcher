@@ -9,7 +9,7 @@
   "scripts": {
     "prepare": "husky",
     "dev": "bun scripts/dev.ts",
-    "build": "bun run build:ui && go build -tags 'purego production' -trimpath -o dist/claude-account-switcher .",
+    "build": "bun run build:ui && go build -tags 'purego production' -trimpath -o dist/claude-account-switcher ./cmd/claude-account-switcher",
     "build:ui": "bun run --filter claude-account-switcher-ui build",
     "lint": "biome check .",
     "lint:go": "golangci-lint run --build-tags headless ./...",
@@ -22,14 +22,19 @@
     "knip": "knip",
     "knip:production": "knip --production",
     "check:architecture": "bun scripts/check-architecture.ts",
-    "check:contract": "go test -tags headless -run TestUIContract ./...",
+    "check:contract": "go test -count=1 -tags headless -run \"TestUI(Contract|DTOContract)\" ./internal/app",
     "secrets:check": "gitleaks git --redact",
     "security:go": "govulncheck -tags headless ./...",
     "spellcheck": "cspell --no-progress docs/architecture.md docs/development.md",
     "validate": "bun scripts/validate.ts local",
     "validate:staged": "lint-staged",
     "validate:fast": "bun scripts/validate.ts fast",
-    "validate:ci": "bun scripts/validate.ts ci"
+    "validate:ci": "bun scripts/validate.ts ci",
+    "storybook": "bun run --filter claude-account-switcher-ui storybook",
+    "build:storybook": "bun run --filter claude-account-switcher-ui build:storybook",
+    "test:visual": "bun run --filter claude-account-switcher-ui test:visual",
+    "test:visual:update": "bun run --filter claude-account-switcher-ui test:visual:update",
+    "generate:contract": "UPDATE_UI_CONTRACT=1 go test -count=1 -tags headless -run TestUIDTOContract ./internal/app"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",

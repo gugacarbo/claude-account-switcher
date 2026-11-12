@@ -13,7 +13,7 @@ Tokens, cookie files, organization IDs and executable paths are not returned to
 JavaScript. Fixed command IDs in `ui_bindings.go` / `frontend/src/bridge.ts` form
 the small bridge surface. Do not bind switcher or filesystem helpers directly.
 
-`desktop_runtime.go` manages one background app, tray, quick panel and reusable
+`internal/app/desktop_runtime.go` manages one background app, tray, quick panel and reusable
 settings/threshold/resume windows. The native tray menu also lists accounts by
 email with an active marker and compact 5-hour/weekly usage percentages. Other
 accounts can be switched directly; switching is disabled during an operation or
@@ -71,7 +71,7 @@ merely to validate layout.
 - Autostart, CLI status, instance locking and update handoff retain behavior.
 - Production binary works without Bun, node_modules or loose web assets.
 
-The opt-in `go test -tags 'purego desktop_smoke' -run TestDesktopBridgeSmoke -v`
+The opt-in `go test -tags 'purego desktop_smoke' -run TestDesktopBridgeSmoke -v ./internal/app`
 launches a temporary window without account workers to exercise the real bridge.
 It needs a functioning graphical session. Do not run it as a headless CI check.
 

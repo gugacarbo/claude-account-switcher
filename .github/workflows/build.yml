@@ -47,21 +47,21 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          v=$(sed -n 's/^const version = "\(.*\)"/\1/p' main.go)
-          go run github.com/tc-hib/go-winres@v0.3.3 make --arch amd64 --product-version "$v.0" --file-version "$v.0"
+          v=$(sed -n 's/^const version = "\(.*\)"/\1/p' internal/app/main.go)
+          go run github.com/tc-hib/go-winres@v0.3.3 make --arch amd64 --product-version "$v.0" --file-version "$v.0" --out cmd/claude-account-switcher/rsrc
       - name: Build
         shell: bash
         run: |
           mkdir -p dist
           if [ "$RUNNER_OS" = macOS ]; then
-            CGO_ENABLED=1 GOARCH=arm64 go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o dist/arm64 .
-            CGO_ENABLED=1 GOARCH=amd64 go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o dist/amd64 .
+            CGO_ENABLED=1 GOARCH=arm64 go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o dist/arm64 ./cmd/claude-account-switcher
+            CGO_ENABLED=1 GOARCH=amd64 go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o dist/amd64 ./cmd/claude-account-switcher
             lipo -create -output "dist/${{ matrix.out }}" dist/arm64 dist/amd64
             rm dist/arm64 dist/amd64
           elif [ "$RUNNER_OS" = Linux ]; then
-            CGO_ENABLED=0 GOOS=linux GOARCH="${{ matrix.goarch }}" go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o "dist/${{ matrix.out }}" .
+            CGO_ENABLED=0 GOOS=linux GOARCH="${{ matrix.goarch }}" go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o "dist/${{ matrix.out }}" ./cmd/claude-account-switcher
           else
-            go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o "dist/${{ matrix.out }}" .
+            go build -tags "purego production" -ldflags "${{ matrix.flags }}" -o "dist/${{ matrix.out }}" ./cmd/claude-account-switcher
           fi
           cd dist && { sha256sum "${{ matrix.out }}" 2>/dev/null || shasum -a 256 "${{ matrix.out }}"; } > "${{ matrix.out }}.sha256"
       - uses: actions/upload-artifact@v4

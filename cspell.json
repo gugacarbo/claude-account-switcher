@@ -18,6 +18,8 @@
     "Vite",
     "Wails",
     "WebKit",
-    "autoswitch"
+    "autoswitch",
+    "UIDTO",
+    "bunx"
   ]
 }

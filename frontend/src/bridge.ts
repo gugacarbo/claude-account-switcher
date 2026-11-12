@@ -1,42 +1,6 @@
-export interface Usage {
-  session: number;
-  weekly: number;
-  sessionReset: string;
-  weeklyReset: string;
-  checkedAt: string;
-}
-export interface Account {
-  id: string;
-  name: string;
-  email: string;
-  plan: string;
-  active: boolean;
-  detail: string;
-  usage: Usage | null;
-}
-export interface Prompt {
-  id: string;
-  account: string;
-  chats: { title: string; folder: string }[];
-  deadline: string;
-  paused: boolean;
-}
-export interface UIState {
-  accounts: Account[];
-  autoSwitch: boolean;
-  spendWeekly: boolean;
-  sshImport: boolean;
-  autostart: boolean;
-  threshold: number;
-  thresholdOpening: number;
-  busy: boolean;
-  status: string;
-  note: string;
-  update: string;
-  version: string;
-  lang: string;
-  resume: Prompt | null;
-}
+import type { UIState } from "./contracts.generated";
+
+export type { Account, Prompt, UIState } from "./contracts.generated";
 export interface Bridge {
   state(): Promise<UIState>;
   call(method: string, ...args: unknown[]): Promise<unknown>;

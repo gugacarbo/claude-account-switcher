@@ -1,23 +1,29 @@
 # Architecture
 
-This repository is a lightweight Bun workspace and one Go module. It does not need a separate package for every folder, multiple Go modules, or a task cache server.
+This repository uses a lightweight Bun workspace and one Go module.
 
-## Boundaries
+## Layout and boundaries
 
+- `cmd/claude-account-switcher/main.go` is the executable entrypoint. Build this package, not the repository root.
+- `internal/app` owns application orchestration, presentation services, account/profile operations, and platform implementations. Tests live beside their implementation and retain platform build constraints.
+- `internal/app/native.go` provides injectable desktop discovery, process inspection, restart, and awake operations. Discovery is evaluated on every operation because app updates can relocate data. Native credential implementations remain platform-specific inside the app package; they have not been rewritten or made public.
+- `internal/persistence` owns JSON state loading, serialization, and atomic replacement. Callers retain locking. Profile copies and backup rollback remain in the application package to preserve their existing transaction ordering.
+- `internal/switching` makes pure decisions from a snapshot and an explicit clock; it cannot read credentials, restart processes, or persist state.
+- `frontend/assets.go` embeds the existing `frontend/dist` output. Build the UI before compiling the desktop; no generated assets are copied into the command package.
 - `frontend/src/App.tsx` composes views and owns the connection lifecycle.
-- `frontend/src/features/accounts`, `settings`, and `resume` own their view components. Features may import shared types and the bridge contract, but not another feature. `bun run check:architecture` enforces this rule.
-- `frontend/src/bridge.ts` is the native runtime adapter. Components receive commands through props; native runtime access does not belong in features.
-- `UIService` projects presentation data and exposes an explicit command allowlist. `TestUIContract` checks the stable method IDs against the frontend map. This is a command-map check, not full DTO schema generation.
-- `switcher.go` coordinates operations, locking, backups, persistence, and platform adapters.
-- `internal/switching` makes pure decisions from a snapshot and an explicit clock. It cannot read credentials, restart processes, or persist state. The coordinator projects expired usage windows before calling it.
-- Platform-specific files retain native credential, filesystem, process, and desktop integration responsibilities.
+- Features own accounts, settings, and resume views. They may import shared types and the bridge, not another feature. The architecture check enforces this rule.
+- `frontend/src/bridge.ts` is the native runtime adapter. Components receive commands through props.
+
+## Contracts and visual coverage
+
+`TestUIContract` checks the thirteen stable command IDs. `TestUIDTOContract` derives TypeScript from the actual Go JSON DTOs, including fields, primitive types, pointers, arrays, nested chat records, and timestamps. The checked-in `frontend/src/contracts.generated.ts` is the source of frontend DTO types. Regenerate intentionally with `bun run generate:contract`; ordinary checks never update it.
+
+Storybook renders eight representative component states without native runtime access. Playwright compares real Chromium screenshots with checked-in Linux references. Dates, locale, viewport, and timezone are fixed. The visual CI job reports differences and never approves references automatically.
 
 ## Compatibility
 
-The JSON state format, account directories, credentials, atomic writes, backup behavior, and switch reason values remain unchanged. The desktop embeds `frontend/dist`; moving that directory requires changing the embed declaration and release pipeline together.
+JSON state, account directories, credentials, private file permissions, atomic writes, backup behavior, and switch reason values remain compatible. Automatic decisions retain cooldown, freshness, headroom, manual-switch pause, and idle-weekly-spending rules. Existing integration and platform tests accompany the moved files.
 
-Automatic decisions retain the ten-minute cooldown, freshness checks, strict ten-point headroom, five-hour pause after a manual switch, and fifteen-minute idle period for weekly spending. Existing coordinator tests protect integration behavior; policy tests exercise decisions without native side effects.
+## Native validation
 
-## Incremental migration
-
-The coordinator still owns persistence and several platform dependencies. Extract those behind narrow, tested adapters when they need to change; do not replace working atomic writes or introduce a generic repository framework merely to relocate code. Full DTO generation and visual regression coverage are separate follow-up work.
+CI compiles the desktop on Linux, Windows, and macOS. Windows and macOS also run the opt-in disposable bridge smoke test. That test uses a temporary switcher data directory and does not switch real accounts. Native CI results must be inspected after publishing; Linux compilation is not proof of Windows or macOS runtime behavior.
