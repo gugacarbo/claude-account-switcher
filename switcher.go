@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/SnlperStripes/claude-account-switcher/internal/switching"
 	"log"
 	"os"
 	"path/filepath"
@@ -307,53 +309,23 @@ func (s *switcher) check(ctx context.Context) (string, func() error) {
 // nearly full, or another one's week is about to reset mostly unused.
 // lastChat is when a chat was last active. Callers hold s.mu.
 func (s *switcher) autoTarget(running bool, lastChat, now time.Time) (*Account, switchCause) {
-	cur := s.account(s.active)
-	if !running || cur == nil || cur.Usage == nil || now.Sub(cur.Usage.CheckedAt) > activeFresh || now.Sub(s.st.LastSwitch) < autoCooldown {
+	in := switching.Input{Running: running, Active: s.active, AutoSwitch: s.st.AutoSwitch, SpendWeekly: s.st.SpendWeekly, Threshold: s.st.Threshold, LastSwitch: s.st.LastSwitch, HandSwitch: s.st.HandSwitch, LastChat: lastChat, Spending: s.st.Spending, SpendUntil: s.st.SpendUntil}
+	for _, a := range s.st.Accounts {
+		item := switching.Account{ID: a.UUID, Problem: a.Problem, HasUsage: a.Usage != nil}
+		if a.Usage != nil {
+			u := a.Usage.current(now)
+			item.Peak = u.peak()
+			item.Weekly = u.Weekly
+			item.CheckedAt = a.Usage.CheckedAt
+			item.WeeklyReset = u.WeeklyReset
+		}
+		in.Accounts = append(in.Accounts, item)
+	}
+	id, cause := switching.Choose(in, now)
+	if id == "" {
 		return nil, byHand
 	}
-	if s.st.AutoSwitch && cur.Usage.current(now).peak() >= s.st.Threshold {
-		var best *Account
-		for _, a := range s.st.Accounts {
-			if s.usable(a, cur, now) && (best == nil || a.Usage.current(now).peak() < best.Usage.current(now).peak()) {
-				best = a
-			}
-		}
-		if best != nil {
-			return best, nearlyFull
-		}
-	}
-	// The active account keeps going while its own week is the one running out.
-	if s.st.SpendWeekly && now.Sub(s.st.HandSwitch) >= handPause && now.Sub(lastChat) >= idleFor && !s.spendable(cur, now) {
-		var best *Account
-		for _, a := range s.st.Accounts {
-			if s.usable(a, cur, now) && s.spendable(a, now) && (best == nil || a.Usage.WeeklyReset.Before(best.Usage.WeeklyReset)) {
-				best = a
-			}
-		}
-		if best != nil {
-			return best, spendWeekly
-		}
-	}
-	return nil, byHand
-}
-
-// usable says whether an auto switch may go to a: fresh numbers and room
-// well below the threshold. Callers hold s.mu.
-func (s *switcher) usable(a, cur *Account, now time.Time) bool {
-	return a != cur && a.Usage != nil && a.Problem == "" && now.Sub(a.Usage.CheckedAt) <= idleFresh &&
-		a.Usage.current(now).peak() < s.st.Threshold-autoHeadroom
-}
-
-// spendable says whether a's week should be used up first: it resets soon
-// with much of it unused, or spend weekly already moved there and that week
-// has not reset yet. a has usage. Callers hold s.mu.
-func (s *switcher) spendable(a *Account, now time.Time) bool {
-	if a.UUID == s.st.Spending && now.Before(s.st.SpendUntil) {
-		return true
-	}
-	u := a.Usage.current(now)
-	left := u.WeeklyReset.Sub(now)
-	return !u.WeeklyReset.IsZero() && left > 0 && left <= expiringWithin && u.Weekly <= expiringMaxWeekly
+	return s.account(id), switchCause(cause)
 }
 
 // run does one app restart at a time and reports the outcome in the menu.

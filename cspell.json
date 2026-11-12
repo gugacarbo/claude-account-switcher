@@ -1,0 +1,23 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "Biome",
+    "Bun",
+    "DTO",
+    "DTOs",
+    "gofmt",
+    "golangci",
+    "govulncheck",
+    "gitleaks",
+    "Husky",
+    "Knip",
+    "lintstaged",
+    "purego",
+    "TypeScript",
+    "Vite",
+    "Wails",
+    "WebKit",
+    "autoswitch"
+  ]
+}

@@ -1,12 +1,7 @@
 :root {
   font-family:
-    "Segoe UI Variable Text",
-    "Segoe UI",
-    -apple-system,
-    BlinkMacSystemFont,
-    "PingFang SC",
-    system-ui,
-    sans-serif;
+    "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont,
+    "PingFang SC", system-ui, sans-serif;
   color: #292724;
   background: #f7f5ef;
   font-synthesis: none;

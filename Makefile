@@ -1,18 +1,16 @@
 .PHONY: frontend check build dev
 
 frontend:
-	cd frontend && bun install --frozen-lockfile && bun run build
+	bun install --frozen-lockfile
+	bun run build:ui
 
 check:
-	go vet -tags headless ./...
-	go test -tags headless ./...
-	cd frontend && bun install --frozen-lockfile && bun run typecheck && bun run test && bun run build
+	bun install --frozen-lockfile
+	bun run validate
 
-# purego avoids a C compiler/pkg-config at build time. GTK4/WebKitGTK are
-# still required at runtime on Linux. Wails supports this tag on desktop OSes.
+# purego avoids a C compiler/pkg-config at build time. Linux still needs GTK/WebKit at runtime.
 build: frontend
 	go build -tags "purego production" -trimpath -o dist/claude-account-switcher .
 
-# Run Vite separately with `cd frontend && bun run dev` for hot reload.
 dev: frontend
-	FRONTEND_DEVSERVER_URL=http://127.0.0.1:5173 go run -tags purego .
+	bun run dev

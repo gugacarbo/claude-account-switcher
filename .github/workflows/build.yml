@@ -38,8 +38,7 @@ jobs:
         with:
           bun-version: 1.4.3
       - name: Frontend
-        working-directory: frontend
-        run: bun install --frozen-lockfile && bun run typecheck && bun run test && bun run build
+        run: bun install --frozen-lockfile && bun run validate
       - run: go vet -tags headless ./...
       - run: go test -tags headless ./...
       # Version info and a manifest make an unsigned exe look less like

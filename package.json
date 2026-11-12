@@ -1,0 +1,41 @@
+{
+  "name": "claude-account-switcher",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.3",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "dev": "bun scripts/dev.ts",
+    "build": "bun run build:ui && go build -tags 'purego production' -trimpath -o dist/claude-account-switcher .",
+    "build:ui": "bun run --filter claude-account-switcher-ui build",
+    "lint": "biome check .",
+    "lint:go": "golangci-lint run --build-tags headless ./...",
+    "format": "biome check --write . && go fmt ./...",
+    "typecheck": "bun run --filter claude-account-switcher-ui typecheck",
+    "test:ui": "bun run --filter claude-account-switcher-ui test",
+    "test:go": "go test -tags headless ./...",
+    "test:race": "go test -race -tags headless ./...",
+    "test:tools": "bun test scripts/",
+    "knip": "knip",
+    "knip:production": "knip --production",
+    "check:architecture": "bun scripts/check-architecture.ts",
+    "check:contract": "go test -tags headless -run TestUIContract ./...",
+    "secrets:check": "gitleaks git --redact",
+    "security:go": "govulncheck -tags headless ./...",
+    "spellcheck": "cspell --no-progress docs/architecture.md docs/development.md",
+    "validate": "bun scripts/validate.ts local",
+    "validate:staged": "lint-staged",
+    "validate:fast": "bun scripts/validate.ts fast",
+    "validate:ci": "bun scripts/validate.ts ci"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "cspell": "^9.0.0",
+    "husky": "^9.1.7",
+    "knip": "^5.0.0",
+    "lint-staged": "^16.0.0"
+  }
+}

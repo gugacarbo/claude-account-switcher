@@ -1,0 +1,16 @@
+version: "2"
+run:
+  build-tags: [headless]
+  timeout: 5m
+linters:
+  default: none
+  settings:
+    staticcheck:
+      checks: ["all", "-QF1001"]
+  enable:
+    - govet
+    - ineffassign
+    - staticcheck
+formatters:
+  enable:
+    - gofmt

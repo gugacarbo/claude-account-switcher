@@ -4,7 +4,8 @@
 
 The executable uses Wails 3.1.0 with its purego desktop backend. React 19,
 TypeScript and Vite own all user-facing screens. Bun 1.4.3 manages the committed
-frontend lockfile. No local HTTP port is opened for the UI in production; the
+root workspace lockfile (`bun.lock`). See [development](development.md) and
+[architecture](architecture.md) for the unified commands and feature boundaries. No local HTTP port is opened for the UI in production; the
 existing single-instance loopback port is unchanged.
 
 `UIService` exports an explicit presentation projection, not persisted State.

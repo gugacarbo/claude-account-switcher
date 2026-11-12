@@ -1,12 +1,12 @@
 import {
+  act,
+  cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
-  cleanup,
-  fireEvent,
-  act,
 } from "@testing-library/react";
-import { afterEach, it, expect, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { App } from "./App";
 import type { Bridge, UIState } from "./bridge";
 

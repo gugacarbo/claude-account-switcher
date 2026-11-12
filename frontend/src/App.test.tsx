@@ -1,13 +1,14 @@
 import {
+  cleanup,
+  fireEvent,
   render,
   screen,
-  fireEvent,
   waitFor,
-  cleanup,
 } from "@testing-library/react";
-import { afterEach, describe, it, expect, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import type { Bridge, UIState } from "./bridge";
+
 afterEach(cleanup);
 const state: UIState = {
   accounts: [
@@ -113,7 +114,9 @@ describe("shared desktop UI", () => {
     render(<App bridge={api} view="resume" />);
     fireEvent.click(await screen.findByRole("checkbox", { name: /Build app/ }));
     await waitFor(() =>
-      expect(screen.getByRole("checkbox", { name: /Build app/ })).not.toBeChecked(),
+      expect(
+        screen.getByRole("checkbox", { name: /Build app/ }),
+      ).not.toBeChecked(),
     );
     fireEvent.click(screen.getByRole("button", { name: "Continue selected" }));
     await waitFor(() =>
