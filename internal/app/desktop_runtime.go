@@ -38,8 +38,8 @@ func windowOptions(name string) application.WebviewWindowOptions {
 		opts.HideOnFocusLost = true
 		opts.HideOnEscape = true
 	case "menu":
-		opts.Width, opts.Height = 232, 116
-		opts.MinWidth, opts.MinHeight = 180, 96
+		opts.Width, opts.Height = 320, 440
+		opts.MinWidth, opts.MinHeight = 280, 240
 		opts.AlwaysOnTop = true
 		opts.HideOnFocusLost = true
 		opts.HideOnEscape = true
@@ -48,24 +48,6 @@ func windowOptions(name string) application.WebviewWindowOptions {
 		opts.AlwaysOnTop = true
 	}
 	return opts
-}
-
-// menuPosition anchors the tray dropdown to the top-right corner of the work
-// area. Linux StatusNotifier hosts do not forward click coordinates, and Wails
-// then centres the window, so the position is computed from the screen instead.
-func menuPosition(area application.Rect, width, height, margin int) (int, int) {
-	x := area.X + area.Width - width - margin
-	if x < area.X+margin {
-		x = area.X + margin
-	}
-	y := area.Y + margin
-	if y+height > area.Y+area.Height {
-		y = area.Y + area.Height - height - margin
-	}
-	if y < area.Y+margin {
-		y = area.Y + margin
-	}
-	return x, y
 }
 
 // usesNativeTrayMenu reports whether the tray dropdown has to be drawn by the
@@ -84,6 +66,19 @@ func usesNativeTrayMenu(getenv func(string) string) bool {
 		return false
 	}
 	return getenv("WAYLAND_DISPLAY") != "" || getenv("XDG_SESSION_TYPE") == "wayland"
+}
+
+type trayMenuWindow interface {
+	Show() application.Window
+	Focus()
+}
+
+func showPositionedTrayMenu(win trayMenuWindow, position func()) {
+	// GTK4 creates the native surface on Show. Moving a hidden, unrealized
+	// window is a no-op even on X11, so the anchor must be applied afterwards.
+	win.Show()
+	position()
+	win.Focus()
 }
 
 func runDesktop(s *switcher, lock net.Listener) {
@@ -129,23 +124,15 @@ func runDesktop(s *switcher, lock net.Listener) {
 		panel.Show().Focus()
 	}
 	showMenu := func() {
-		// The tray dropdown is a React window placed under the icon, so it
-		// keeps the app styling instead of the host menu implementation.
-		// Linux hosts do not forward the click coordinates, and Wails then
-		// falls back to the centre of the screen, so the anchor is computed
-		// from the work area instead.
-		if screen, err := panel.GetScreen(); err == nil && screen != nil {
-			area := screen.WorkArea
-			if area.Width <= 0 || area.Height <= 0 {
-				area = screen.Bounds
+		showPositionedTrayMenu(menuWin, func() {
+			// On Linux Wails stores the coordinates supplied by Activate or
+			// SecondaryActivate before invoking this handler. Do not query the
+			// live cursor: it may already have moved away from the tray icon.
+			// On Windows/macOS this uses the native tray icon geometry.
+			if err := tray.PositionWindow(menuWin, 6); err != nil {
+				log.Printf("position tray dropdown: %v", err)
 			}
-			width, height := menuWin.Size()
-			x, y := menuPosition(area, width, height, 8)
-			menuWin.SetPosition(x, y)
-		} else if err := tray.PositionWindow(menuWin, 6); err != nil {
-			menuWin.Center()
-		}
-		menuWin.Show().Focus()
+		})
 	}
 	// Wayland refuses to place a client window, so the dropdown falls back to the
 	// host menu there; elsewhere the React popover is anchored to the work area.

@@ -71,8 +71,8 @@ func TestTrayMenuWindowBehavesLikeADropdown(t *testing.T) {
 	if !opts.HideOnEscape {
 		t.Fatal("tray menu must close on escape")
 	}
-	if opts.Width > 320 || opts.Height > 200 {
-		t.Fatalf("tray menu is not menu sized: %dx%d", opts.Width, opts.Height)
+	if opts.Width != 320 || opts.Height != 440 {
+		t.Fatalf("tray menu must fit quick profiles at 320x440: got %dx%d", opts.Width, opts.Height)
 	}
 	if opts.URL != "/?view=menu" {
 		t.Fatalf("tray menu url is %q", opts.URL)
@@ -89,26 +89,6 @@ func TestResumeWindowStaysFramelessPrompt(t *testing.T) {
 	}
 	if opts.MinWidth < 360 || opts.MinHeight < 360 {
 		t.Fatal("resume minimum size below 360")
-	}
-}
-
-// Linux hosts do not forward click coordinates, so the dropdown is anchored to
-// the top-right corner of the work area instead of the screen centre.
-func TestMenuPositionAnchorsToWorkAreaTopRight(t *testing.T) {
-	area := application.Rect{X: 1920, Y: 0, Width: 1920, Height: 1080}
-	x, y := menuPosition(area, 232, 116, 8)
-	if x != area.X+area.Width-232-8 {
-		t.Fatalf("x = %d, want anchored to the right edge", x)
-	}
-	if y != area.Y+8 {
-		t.Fatalf("y = %d, want anchored to the top edge", y)
-	}
-
-	// A work area shorter than the menu keeps the window inside the margins.
-	small := application.Rect{X: 0, Y: 0, Width: 200, Height: 100}
-	x, y = menuPosition(small, 232, 116, 8)
-	if x != 8 || y != 8 {
-		t.Fatalf("small work area gave %d,%d, want the top-left margin", x, y)
 	}
 }
 
@@ -139,6 +119,39 @@ func TestUsesNativeTrayMenuFollowsSession(t *testing.T) {
 		if got := usesNativeTrayMenu(env(c.values)); got != c.want {
 			t.Fatalf("%s: native = %v, want %v", c.name, got, c.want)
 		}
+	}
+}
+
+// A hidden GTK4 window has no surface yet, so moving it before Show silently
+// does nothing. The dropdown must create the surface before applying its anchor.
+func TestTrayMenuPositionsAfterShowingSurface(t *testing.T) {
+	win := &unrealizedTrayWindow{}
+	showPositionedTrayMenu(win, func() { win.SetPosition(1680, 40) })
+	if win.x != 1680 || win.y != 40 {
+		t.Fatalf("menu stayed at %d,%d: position was applied before the surface existed", win.x, win.y)
+	}
+	if !win.focused {
+		t.Fatal("menu must receive focus after positioning")
+	}
+}
+
+// The native window is the external boundary: this double models GTK4 ignoring
+// movement until its surface is realized, without starting a desktop app.
+type unrealizedTrayWindow struct {
+	shown, focused bool
+	x, y           int
+}
+
+func (w *unrealizedTrayWindow) Show() application.Window {
+	w.shown = true
+	return nil
+}
+
+func (w *unrealizedTrayWindow) Focus() { w.focused = w.shown && w.x == 1680 && w.y == 40 }
+
+func (w *unrealizedTrayWindow) SetPosition(x, y int) {
+	if w.shown {
+		w.x, w.y = x, y
 	}
 }
 
