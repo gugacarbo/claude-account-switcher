@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Bridge, UIState } from "./bridge";
+import { SettingsIcon } from "./shared/Icons";
+import { WindowHeader } from "./shared/WindowHeader";
 import "./style.css";
 
 import { AccountCard } from "./features/accounts/AccountCard";
@@ -8,6 +10,12 @@ import { Settings } from "./features/settings/Settings";
 import { Threshold } from "./features/settings/Threshold";
 import type { T } from "./shared/i18n";
 
+type Screen = "panel" | "settings" | "threshold";
+
+function isScreen(value: string): value is Screen {
+  return value === "panel" || value === "settings" || value === "threshold";
+}
+
 export function App({
   bridge,
   view = "panel",
@@ -15,9 +23,22 @@ export function App({
   bridge: Bridge;
   view?: string;
 }) {
+  // Only the resume prompt is a separate native window; the panel hosts the
+  // accounts, settings, and threshold sections, reached in place or via the
+  // desktop "navigate" event. Legacy ?view= deep links keep working.
+  const unified = view === "panel";
+  const [screen, setScreen] = useState<Screen>("panel");
   const [state, setState] = useState<UIState | null>(null),
     [error, setError] = useState(""),
     [pending, setPending] = useState(false);
+  const active: Screen | "resume" =
+    view === "resume"
+      ? "resume"
+      : unified
+        ? screen
+        : isScreen(view)
+          ? view
+          : "panel";
   useEffect(() => {
     let live = true;
     let off = () => {};
@@ -45,6 +66,15 @@ export function App({
       off();
     };
   }, [bridge]);
+  useEffect(() => {
+    if (!unified || !bridge.subscribeNavigation) return;
+    const off = bridge.subscribeNavigation((section) => {
+      // The bridge already filters payloads; guard again so an unexpected
+      // value can never force an invalid screen.
+      if (isScreen(section)) setScreen(section);
+    });
+    return off;
+  }, [bridge, unified]);
   const t: T = (en, zh) => (state?.lang === "zh-CN" ? zh : en);
   async function act(method: string, ...args: unknown[]) {
     setPending(true);
@@ -61,44 +91,40 @@ export function App({
     }
   }
   const disabled = pending || !!state?.busy;
+  // The resume prompt lives in its own native window; closing from any other
+  // screen always targets the unified panel window.
+  const close = () =>
+    act("CloseWindow", active === "resume" ? "resume" : "panel");
+  const goBack = () => setScreen(active === "threshold" ? "settings" : "panel");
+  const title =
+    active === "settings"
+      ? t("Make it work for you", "按你的方式运行")
+      : active === "threshold"
+        ? t("Choose your limit", "设置切换阈值")
+        : active === "resume"
+          ? t("Pick up where you left off", "继续未完成的工作")
+          : t("A little more room.", "留出更多空间。");
   return (
-    <main className={`app ${view}`}>
-      <header className="header">
-        <div className="brand-mark" aria-hidden="true">
-          ◉
-        </div>
-        <div className="brand-copy">
-          <span className="eyebrow">ACCOUNT SWITCHER</span>
-          <h1>
-            {view === "settings"
-              ? t("Make it work for you", "按你的方式运行")
-              : view === "threshold"
-                ? t("Choose your limit", "设置切换阈值")
-                : view === "resume"
-                  ? t("Pick up where you left off", "继续未完成的工作")
-                  : t("A little more room.", "留出更多空间。")}
-          </h1>
-        </div>
-        {view === "panel" ? (
+    <main className={`app ${active}`}>
+      <WindowHeader
+        title={title}
+        t={t}
+        onClose={close}
+        onBack={unified && active !== "panel" ? goBack : undefined}
+      >
+        {active === "panel" ? (
           <button
             type="button"
-            className="icon-button"
+            className="window-header-button"
             aria-label={t("Settings", "设置")}
-            onClick={() => act("OpenWindow", "settings")}
+            onClick={() =>
+              unified ? setScreen("settings") : act("OpenWindow", "settings")
+            }
           >
-            ⚙
+            <SettingsIcon />
           </button>
-        ) : (
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={t("Close", "关闭")}
-            onClick={() => act("CloseWindow", view)}
-          >
-            ×
-          </button>
-        )}
-      </header>
+        ) : null}
+      </WindowHeader>
       {error ? (
         <div className="notice error" role="alert">
           {error}
@@ -121,17 +147,29 @@ export function App({
         </p>
       ) : (
         <>
-          {view === "settings" ? (
-            <Settings state={state} t={t} disabled={disabled} act={act} />
-          ) : view === "threshold" ? (
-            <Threshold
-              key={`${state.thresholdOpening}:${state.threshold}`}
+          {active === "settings" ? (
+            <Settings
               state={state}
               t={t}
               disabled={disabled}
               act={act}
+              onOpenThreshold={
+                unified
+                  ? () => setScreen("threshold")
+                  : undefined /* standalone window keeps the desktop call */
+              }
             />
-          ) : view === "resume" ? (
+          ) : active === "threshold" ? (
+            <Threshold
+              key={state.threshold}
+              state={state}
+              t={t}
+              disabled={disabled}
+              act={act}
+              onCancel={unified ? () => setScreen("settings") : undefined}
+              onComplete={unified ? () => setScreen("settings") : undefined}
+            />
+          ) : active === "resume" ? (
             <Resume
               key={state.resume?.id ?? "none"}
               prompt={state.resume}
@@ -223,7 +261,11 @@ export function App({
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => act("OpenWindow", "settings")}
+                  onClick={() =>
+                    unified
+                      ? setScreen("settings")
+                      : act("OpenWindow", "settings")
+                  }
                 >
                   {t("Manage", "管理")}
                 </button>

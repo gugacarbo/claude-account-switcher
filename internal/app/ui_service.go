@@ -137,15 +137,27 @@ func (u *UIService) InstallUpdate() error {
 	return nil
 }
 func (u *UIService) OpenDataFolder() { shellOpen(u.s.dir) }
+
+// navigationSection translates legacy OpenWindow names into panel sections.
+// Settings and threshold are sections of the persistent panel, not windows;
+// OpenWindow shows the panel and emits "navigate" so the frontend can route.
+func navigationSection(name string) (string, error) {
+	switch name {
+	case "settings", "threshold":
+		return name, nil
+	}
+	return "", errors.New("unknown window")
+}
 func (u *UIService) OpenWindow(name string) error {
-	if name != "settings" && name != "threshold" {
-		return errors.New("unknown window")
+	section, err := navigationSection(name)
+	if err != nil {
+		return err
 	}
 	if name == "threshold" {
 		u.thresholdOpening.Add(1)
 	}
 	if u.open != nil {
-		u.open(name)
+		u.open(section)
 	}
 	return nil
 }

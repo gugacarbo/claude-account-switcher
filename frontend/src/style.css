@@ -1,7 +1,15 @@
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("./assets/fonts/NunitoSans.ttf") format("truetype-variations");
+  font-weight: 200 1000;
+  font-stretch: 75% 125%;
+  font-display: swap;
+}
+
 :root {
   font-family:
-    "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont,
-    "PingFang SC", system-ui, sans-serif;
+    "Nunito Sans", "Segoe UI Variable Text", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   color: #292724;
   background: #f7f5ef;
   font-synthesis: none;
@@ -97,6 +105,61 @@ h1 {
   margin: 0;
   letter-spacing: -0.5px;
 }
+.window-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.window-header-bar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+.window-header-title {
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 0;
+  letter-spacing: -0.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-header-actions,
+.window-header-button {
+  --wails-draggable: no-drag;
+}
+
+.window-header-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.window-header-button {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  flex: none;
+}
+
+.window-header-button:hover:not(:disabled) {
+  color: var(--text);
+}
+
 .icon-button {
   background: none;
   border: 1px solid var(--line);

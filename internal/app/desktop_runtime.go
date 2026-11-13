@@ -18,6 +18,24 @@ import (
 // Build frontend before compiling the desktop app (see Makefile).
 var frontendAssets = webassets.Assets
 
+// desktopWindowNames lists every native window: the persistent panel and the
+// transient resume prompt. Settings and threshold are panel sections navigated
+// via the "navigate" event, not windows.
+func desktopWindowNames() []string { return []string{"panel", "resume"} }
+
+// windowOptions is a pure descriptor so tests can assert window semantics
+// without booting a GUI. The panel is persistent (no hide-on-focus, no escape
+// hide, not always-on-top, visible in the taskbar); resume stays a frameless,
+// always-on-top prompt.
+func windowOptions(name string) application.WebviewWindowOptions {
+	opts := application.WebviewWindowOptions{Name: name, Title: appName(), URL: "/?view=" + name, Width: 420, Height: 640, MinWidth: 360, MinHeight: 360, Hidden: true, Frameless: true}
+	if name == "resume" {
+		opts.Width, opts.Height = 480, 540
+		opts.AlwaysOnTop = true
+	}
+	return opts
+}
+
 func runDesktop(s *switcher, lock net.Listener) {
 	hub := newResumeHub()
 	service := &UIService{s: s, prompts: hub}
@@ -31,20 +49,12 @@ func runDesktop(s *switcher, lock net.Listener) {
 	tray.SetIcon(trayIcon(-1, defaultThreshold))
 	tray.SetTooltip(appName())
 	windows := map[string]*application.WebviewWindow{}
-	for _, name := range []string{"panel", "settings", "threshold", "resume"} {
-		width, height := 420, 640
-		if name == "settings" {
-			width, height = 480, 620
-		}
-		if name == "threshold" {
-			width, height = 420, 470
-		}
-		if name == "resume" {
-			width, height = 480, 540
-		}
-		win := app.Window.NewWithOptions(application.WebviewWindowOptions{Name: name, Title: appName(), URL: "/?view=" + name, Width: width, Height: height, MinWidth: 360, MinHeight: 360, Hidden: true, Frameless: name == "panel", AlwaysOnTop: name == "panel" || name == "resume", HideOnFocusLost: name == "panel", HideOnEscape: name == "panel", Windows: application.WindowsWindow{HiddenOnTaskbar: name == "panel"}})
+	for _, name := range desktopWindowNames() {
+		win := app.Window.NewWithOptions(windowOptions(name))
 		windows[name] = win
 		win.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+			// Closing hides instead of destroying: the panel keeps its
+			// position, an open resume prompt is cancelled.
 			e.Cancel()
 			win.Hide()
 			if name == "resume" {
@@ -53,22 +63,31 @@ func runDesktop(s *switcher, lock net.Listener) {
 		})
 	}
 	panel := windows["panel"]
+	var positioned bool
 	showPanel := func() {
-		if panel.IsVisible() {
-			panel.Hide()
-			return
-		}
-		if err := tray.PositionWindow(panel, 6); err != nil {
-			panel.Center()
+		// Show/focus is idempotent, never a toggle, and the window is
+		// positioned only once so user moves are preserved across opens.
+		if !positioned {
+			if err := tray.PositionWindow(panel, 6); err != nil {
+				panel.Center()
+			}
+			positioned = true
 		}
 		panel.Show().Focus()
 	}
 	tray.OnClick(showPanel)
 	menu := app.NewMenu()
-	updateTrayMenu(menu, s.snapshot(), updating.Load(), time.Now(), service, showPanel)
+	updateTrayMenu(menu, service, showPanel)
 	tray.SetMenu(menu)
-	service.open = func(name string) { panel.Hide(); windows[name].Show().Focus(); app.Event.Emit("state-changed") }
-	service.close = func(name string) { windows[name].Hide() }
+	service.open = func(section string) {
+		showPanel()
+		app.Event.Emit("navigate", section)
+	}
+	service.close = func(name string) {
+		if win, ok := windows[name]; ok {
+			win.Hide()
+		}
+	}
 	service.quit = app.Quit
 	resumeInUI = func(req resumeRequest, wait time.Duration) []bool {
 		result := hub.ask(req, wait, func() { windows["resume"].Show().Focus(); app.Event.Emit("state-changed") })
@@ -113,10 +132,6 @@ func runDesktop(s *switcher, lock net.Listener) {
 							}
 						}
 						tray.SetIcon(trayIcon(pct, snap.Threshold))
-						application.InvokeSync(func() {
-							updateTrayMenu(menu, snap, updating.Load(), time.Now(), service, showPanel)
-							tray.SetMenu(menu)
-						})
 						app.Event.Emit("state-changed")
 					}
 				}

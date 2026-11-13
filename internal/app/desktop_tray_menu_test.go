@@ -4,49 +4,36 @@ package app
 
 import (
 	"testing"
-	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-func TestTrayMenuRefreshReplacesAccountsAndActiveMarker(t *testing.T) {
+func TestTrayMenuHasOnlyOpenAndQuit(t *testing.T) {
 	menu := application.NewMenu()
 	defer menu.Destroy()
 	service := &UIService{s: newSwitcher(t.TempDir())}
-	snap := snapshot{Active: "a", Accounts: []Account{{UUID: "a", Email: "a@example.test", Usage: &Usage{Session: 42, Weekly: 68}}, {UUID: "b", Email: "b@example.test"}}}
-	updateTrayMenu(menu, snap, false, time.Now(), service, func() {})
-	active := menu.FindByLabel("a@example.test · Active — 5h 42% · week 68%")
-	if active == nil || active.Enabled() {
-		t.Fatal("active profile not shown as inactive action")
-	}
-	other := menu.FindByLabel("b@example.test — usage unknown")
-	if other == nil || !other.Enabled() {
-		t.Fatal("other profile not offered for quick switching")
-	}
+	updateTrayMenu(menu, service, func() {})
 	if menu.FindByLabel("Open") == nil || menu.FindByLabel("Quit") == nil {
-		t.Fatal("panel or quit action lost")
+		t.Fatal("open and quit actions are required")
 	}
-	snap.Active = "b"
-	snap.Accounts = snap.Accounts[1:]
-	updateTrayMenu(menu, snap, true, time.Now(), service, func() {})
-	if menu.FindByLabel("a@example.test · Active — 5h 42% · week 68%") != nil {
-		t.Fatal("removed profile remains visible")
+	if menu.FindByLabel("a@example.test — 5h 42% · week 68%") != nil || menu.FindByLabel("b@example.test — usage unknown") != nil {
+		t.Fatal("tray menu must not list accounts; switching lives in the panel")
 	}
-	current := menu.FindByLabel("b@example.test · Active — usage unknown")
-	if current == nil || current.Enabled() {
-		t.Fatal("active marker did not follow backend state")
+	if menu.FindByLabel("No accounts yet") != nil {
+		t.Fatal("empty state belongs in the panel, not the tray menu")
 	}
-}
-
-func TestTrayMenuEmptyStateDoesNotHidePanel(t *testing.T) {
-	menu := application.NewMenu()
-	defer menu.Destroy()
-	updateTrayMenu(menu, snapshot{}, false, time.Now(), &UIService{s: newSwitcher(t.TempDir())}, func() {})
-	empty := menu.FindByLabel("No accounts yet")
-	if empty == nil || empty.Enabled() {
-		t.Fatal("missing non-interactive empty state")
+	labels := []string{}
+	for i := 0; i < 3; i++ {
+		item := menu.ItemAt(i)
+		if item == nil {
+			t.Fatalf("missing menu item %d", i)
+		}
+		labels = append(labels, item.Label())
 	}
-	if menu.FindByLabel("Open") == nil {
-		t.Fatal("cannot reach account panel")
+	if menu.ItemAt(3) != nil {
+		t.Fatal("extra tray menu items beyond Open/Quit")
+	}
+	if labels[0] != "Open" || labels[2] != "Quit" || labels[1] != "" {
+		t.Fatalf("unexpected tray menu layout: %v", labels)
 	}
 }
