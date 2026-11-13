@@ -18,18 +18,30 @@ import (
 // Build frontend before compiling the desktop app (see Makefile).
 var frontendAssets = webassets.Assets
 
-// desktopWindowNames lists every native window: the persistent panel and the
-// transient resume prompt. Settings and threshold are panel sections navigated
+// desktopWindowNames lists every native window: the panel, the React tray menu
+// and the resume prompt. Settings and threshold are panel sections navigated
 // via the "navigate" event, not windows.
-func desktopWindowNames() []string { return []string{"panel", "resume"} }
+func desktopWindowNames() []string { return []string{"panel", "menu", "resume"} }
 
 // windowOptions is a pure descriptor so tests can assert window semantics
-// without booting a GUI. The panel is persistent (no hide-on-focus, no escape
-// hide, not always-on-top, visible in the taskbar); resume stays a frameless,
-// always-on-top prompt.
+// without booting a GUI. Every window is frameless and starts hidden:
+//   - panel: hosted sections, hidden as soon as it loses focus so it never
+//     lingers behind other apps;
+//   - menu: the tray dropdown rendered in React, closed on focus loss or Esc;
+//   - resume: a prompt that must stay on top until it is answered.
 func windowOptions(name string) application.WebviewWindowOptions {
 	opts := application.WebviewWindowOptions{Name: name, Title: appName(), URL: "/?view=" + name, Width: 420, Height: 640, MinWidth: 360, MinHeight: 360, Hidden: true, Frameless: true}
-	if name == "resume" {
+	switch name {
+	case "panel":
+		opts.HideOnFocusLost = true
+		opts.HideOnEscape = true
+	case "menu":
+		opts.Width, opts.Height = 232, 116
+		opts.MinWidth, opts.MinHeight = 180, 96
+		opts.AlwaysOnTop = true
+		opts.HideOnFocusLost = true
+		opts.HideOnEscape = true
+	case "resume":
 		opts.Width, opts.Height = 480, 540
 		opts.AlwaysOnTop = true
 	}
@@ -63,8 +75,11 @@ func runDesktop(s *switcher, lock net.Listener) {
 		})
 	}
 	panel := windows["panel"]
+	menuWin := windows["menu"]
 	var positioned bool
 	showPanel := func() {
+		// The dropdown closes first so it never floats over the panel.
+		menuWin.Hide()
 		// Show/focus is idempotent, never a toggle, and the window is
 		// positioned only once so user moves are preserved across opens.
 		if !positioned {
@@ -75,10 +90,16 @@ func runDesktop(s *switcher, lock net.Listener) {
 		}
 		panel.Show().Focus()
 	}
-	tray.OnClick(showPanel)
-	menu := app.NewMenu()
-	updateTrayMenu(menu, service, showPanel)
-	tray.SetMenu(menu)
+	showMenu := func() {
+		// The tray dropdown is a React window placed under the icon, so it
+		// keeps the app styling instead of the host menu implementation.
+		// Repositioning on every click follows the icon wherever it sits.
+		if err := tray.PositionWindow(menuWin, 6); err != nil {
+			menuWin.Center()
+		}
+		menuWin.Show().Focus()
+	}
+	tray.OnClick(showMenu)
 	service.open = func(section string) {
 		showPanel()
 		app.Event.Emit("navigate", section)

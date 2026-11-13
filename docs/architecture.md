@@ -13,6 +13,12 @@ This repository uses a lightweight Bun workspace and one Go module.
 - `frontend/src/App.tsx` composes views and owns the connection lifecycle. The
   panel is a unified screen: settings and threshold open in place via internal
   navigation; only the resume prompt keeps its own native window.
+- Three native windows exist: `panel`, `menu`, and `resume`. Every one is
+  frameless and starts hidden. The panel and the tray menu hide as soon as they
+  lose focus, so a click outside closes them instead of leaving them behind
+  other apps. The tray icon opens the React dropdown (`frontend/src/features/tray`),
+  not a host menu: `SystemTray.SetMenu` is never called, and the dropdown reaches
+  the desktop through the existing `OpenWindow`/`Quit` commands.
 - `frontend/src/shared/WindowHeader.tsx` is the single title bar for every
   screen: drag region with the `--wails-draggable: drag` inline token, an
   optional back control on nested screens, and a close control that always

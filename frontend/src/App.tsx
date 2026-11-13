@@ -8,6 +8,7 @@ import { AccountCard } from "./features/accounts/AccountCard";
 import { Resume } from "./features/resume/Resume";
 import { Settings } from "./features/settings/Settings";
 import { Threshold } from "./features/settings/Threshold";
+import { TrayMenu } from "./features/tray/TrayMenu";
 import type { T } from "./shared/i18n";
 
 type Screen = "panel" | "settings" | "threshold";
@@ -75,6 +76,11 @@ export function App({
     });
     return off;
   }, [bridge, unified]);
+  // The tray dropdown is its own small window, not a panel section: it needs no
+  // header and no shared state beyond the language.
+  if (view === "menu") {
+    return <TrayMenu bridge={bridge} lang={state?.lang ?? "en"} />;
+  }
   const t: T = (en, zh) => (state?.lang === "zh-CN" ? zh : en);
   async function act(method: string, ...args: unknown[]) {
     setPending(true);

@@ -169,6 +169,44 @@ h1 {
   font-size: 20px;
   flex: none;
 }
+/* Tray dropdown: its own frameless window, so it keeps the app surface
+   instead of the host menu implementation. */
+.tray-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  min-height: 100vh;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.tray-menu-item {
+  --wails-draggable: no-drag;
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+}
+
+.tray-menu-item:hover:not(:disabled),
+.tray-menu-item:focus-visible {
+  background: var(--accent-soft);
+}
+
+.tray-menu-separator {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 4px 6px;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;

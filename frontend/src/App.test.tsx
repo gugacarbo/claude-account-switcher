@@ -192,4 +192,19 @@ describe("shared desktop UI", () => {
       expect(api.call).toHaveBeenCalledWith("OpenWindow", "threshold"),
     );
   });
+
+  it("renders the tray dropdown and forwards its two commands", async () => {
+    const api = bridge();
+    render(<App bridge={api} view="menu" />);
+    expect(
+      await screen.findByRole("menu", { name: "Application menu" }),
+    ).toBeVisible();
+    expect(screen.queryByTestId("window-drag")).toBeNull();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open" }));
+    await waitFor(() =>
+      expect(api.call).toHaveBeenCalledWith("OpenWindow", "panel"),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Quit" }));
+    await waitFor(() => expect(api.call).toHaveBeenCalledWith("Quit"));
+  });
 });

@@ -143,7 +143,7 @@ func (u *UIService) OpenDataFolder() { shellOpen(u.s.dir) }
 // OpenWindow shows the panel and emits "navigate" so the frontend can route.
 func navigationSection(name string) (string, error) {
 	switch name {
-	case "settings", "threshold":
+	case "panel", "settings", "threshold":
 		return name, nil
 	}
 	return "", errors.New("unknown window")
@@ -162,7 +162,7 @@ func (u *UIService) OpenWindow(name string) error {
 	return nil
 }
 func (u *UIService) CloseWindow(name string) error {
-	if name != "settings" && name != "threshold" && name != "resume" && name != "panel" {
+	if name != "settings" && name != "threshold" && name != "resume" && name != "panel" && name != "menu" {
 		return errors.New("unknown window")
 	}
 	if name == "resume" && u.prompts != nil {
