@@ -8,6 +8,8 @@ import (
 	"io/fs"
 	"log"
 	"net"
+	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -64,6 +66,24 @@ func menuPosition(area application.Rect, width, height, margin int) (int, int) {
 		y = area.Y + margin
 	}
 	return x, y
+}
+
+// usesNativeTrayMenu reports whether the tray dropdown has to be drawn by the
+// desktop instead of React. Wayland compositors refuse to place a client window,
+// so a React popover cannot be anchored to the icon there; X11, Windows and
+// macOS honour the position and keep the React dropdown. SWITCHER_TRAY_MENU
+// forces a mode ("native" or "react") when validating on a specific desktop.
+func usesNativeTrayMenu(getenv func(string) string) bool {
+	if runtime.GOOS != "linux" {
+		return false
+	}
+	switch getenv("SWITCHER_TRAY_MENU") {
+	case "native":
+		return true
+	case "react":
+		return false
+	}
+	return getenv("WAYLAND_DISPLAY") != "" || getenv("XDG_SESSION_TYPE") == "wayland"
 }
 
 func runDesktop(s *switcher, lock net.Listener) {
@@ -127,11 +147,16 @@ func runDesktop(s *switcher, lock net.Listener) {
 		}
 		menuWin.Show().Focus()
 	}
-	// The Linux StatusNotifier host reports a plain click as a menu request and
-	// only raises Activate on a double click, so the secondary click opens the
-	// same dropdown and gives the tray a single-action entry point.
-	tray.OnClick(showMenu)
-	tray.OnRightClick(showMenu)
+	// Wayland refuses to place a client window, so the dropdown falls back to the
+	// host menu there; elsewhere the React popover is anchored to the work area.
+	if usesNativeTrayMenu(os.Getenv) {
+		menu := app.NewMenu()
+		updateTrayMenu(menu, service, showPanel)
+		tray.SetMenu(menu)
+	} else {
+		tray.OnClick(showMenu)
+		tray.OnRightClick(showMenu)
+	}
 	service.open = func(section string) {
 		showPanel()
 		app.Event.Emit("navigate", section)

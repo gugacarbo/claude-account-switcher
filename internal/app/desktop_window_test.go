@@ -3,6 +3,7 @@
 package app
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -108,5 +109,45 @@ func TestMenuPositionAnchorsToWorkAreaTopRight(t *testing.T) {
 	x, y = menuPosition(small, 232, 116, 8)
 	if x != 8 || y != 8 {
 		t.Fatalf("small work area gave %d,%d, want the top-left margin", x, y)
+	}
+}
+
+// Wayland cannot place a client window, so the dropdown must come from the
+// desktop there; other targets keep the React popover.
+func TestUsesNativeTrayMenuFollowsSession(t *testing.T) {
+	env := func(values map[string]string) func(string) string {
+		return func(key string) string { return values[key] }
+	}
+	if runtime.GOOS != "linux" {
+		if usesNativeTrayMenu(env(nil)) {
+			t.Fatal("non-linux hosts must keep the React dropdown")
+		}
+		return
+	}
+	cases := []struct {
+		name   string
+		values map[string]string
+		want   bool
+	}{
+		{"wayland", map[string]string{"WAYLAND_DISPLAY": "wayland-0"}, true},
+		{"wayland session", map[string]string{"XDG_SESSION_TYPE": "wayland"}, true},
+		{"x11", map[string]string{"XDG_SESSION_TYPE": "x11", "DISPLAY": ":0"}, false},
+		{"forced native", map[string]string{"SWITCHER_TRAY_MENU": "native"}, true},
+		{"forced react", map[string]string{"SWITCHER_TRAY_MENU": "react", "WAYLAND_DISPLAY": "wayland-0"}, false},
+	}
+	for _, c := range cases {
+		if got := usesNativeTrayMenu(env(c.values)); got != c.want {
+			t.Fatalf("%s: native = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+// The host-drawn fallback keeps the two actions the React dropdown offers.
+func TestNativeTrayMenuOffersOpenAndQuit(t *testing.T) {
+	menu := application.NewMenu()
+	defer menu.Destroy()
+	updateTrayMenu(menu, &UIService{s: newSwitcher(t.TempDir())}, func() {})
+	if menu.FindByLabel("Open") == nil || menu.FindByLabel("Quit") == nil {
+		t.Fatal("native tray menu must offer Open and Quit")
 	}
 }
