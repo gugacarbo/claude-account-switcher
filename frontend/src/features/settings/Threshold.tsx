@@ -6,15 +6,21 @@ export function Threshold({
   t,
   disabled,
   act,
+  onCancel,
+  onComplete,
 }: {
   state: UIState;
   t: T;
   disabled: boolean;
   act: (method: string, ...args: unknown[]) => Promise<boolean>;
+  onCancel?: () => void;
+  onComplete?: () => void;
 }) {
   const [value, setValue] = useState(String(state.threshold));
   const n = Number(value),
     valid = /^\d{1,2}$/.test(value) && n >= 1 && n <= 99;
+  const dismiss = () =>
+    onCancel ? onCancel() : void act("CloseWindow", "threshold");
   return (
     <>
       <p className="intro">
@@ -74,11 +80,7 @@ export function Threshold({
               )}
       </p>
       <div className="actions">
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => act("CloseWindow", "threshold")}
-        >
+        <button type="button" className="secondary" onClick={dismiss}>
           {t("Cancel", "取消")}
         </button>
         <button
@@ -86,8 +88,10 @@ export function Threshold({
           className="primary"
           disabled={!valid || disabled}
           onClick={async () => {
-            if (await act("SetThreshold", n))
-              await act("CloseWindow", "threshold");
+            if (await act("SetThreshold", n)) {
+              if (onComplete) onComplete();
+              else await act("CloseWindow", "threshold");
+            }
           }}
         >
           {t("Set threshold", "设置阈值")}

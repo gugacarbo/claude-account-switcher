@@ -9,6 +9,11 @@ for (const story of [
   "switch-threshold",
   "resume-chats",
   "no-resume",
+  "window-header-interactive",
+  "unified-navigation-states",
+  "dark-controls",
+  "long-titles",
+  "min-width",
 ]) {
   test(story, async ({ page }) => {
     await page.clock.setFixedTime(new Date("2030-01-01T10:00:00Z"));

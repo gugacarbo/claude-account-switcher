@@ -1,7 +1,15 @@
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("./assets/fonts/NunitoSans.ttf") format("truetype-variations");
+  font-weight: 200 1000;
+  font-stretch: 75% 125%;
+  font-display: swap;
+}
+
 :root {
   font-family:
-    "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont,
-    "PingFang SC", system-ui, sans-serif;
+    "Nunito Sans", "Segoe UI Variable Text", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   color: #292724;
   background: #f7f5ef;
   font-synthesis: none;
@@ -97,6 +105,61 @@ h1 {
   margin: 0;
   letter-spacing: -0.5px;
 }
+.window-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.window-header-bar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+.window-header-title {
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 0;
+  letter-spacing: -0.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-header-actions,
+.window-header-button {
+  --wails-draggable: no-drag;
+}
+
+.window-header-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.window-header-button {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  flex: none;
+}
+
+.window-header-button:hover:not(:disabled) {
+  color: var(--text);
+}
+
 .icon-button {
   background: none;
   border: 1px solid var(--line);
@@ -106,6 +169,143 @@ h1 {
   font-size: 20px;
   flex: none;
 }
+/* Tray dropdown: its own frameless window, so it keeps the app surface
+   instead of the host menu implementation. The Go host sizes the window;
+   the CSS pins the working width and caps the height. */
+.tray-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  width: 320px;
+  height: 100vh;
+  max-height: 480px;
+  min-height: 0;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tray-menu-status {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tray-menu-error {
+  margin: 0 0 4px;
+}
+
+.tray-accounts {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tray-account {
+  --wails-draggable: no-drag;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+}
+
+.tray-account.active {
+  background: var(--accent-soft);
+}
+
+.tray-account:disabled {
+  cursor: default;
+}
+
+.tray-account:hover:not(:disabled),
+.tray-account:focus-visible {
+  background: var(--accent-soft);
+  filter: none;
+}
+
+.tray-account-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tray-account-head strong {
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray-account-head .plan {
+  flex: none;
+}
+
+.tray-account-flag {
+  margin-left: auto;
+  flex: none;
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tray-account-sub {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--muted);
+  min-width: 0;
+}
+
+.tray-account-sub > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray-account-pending {
+  font-size: 10px;
+  color: var(--accent);
+}
+
+.tray-menu-item {
+  --wails-draggable: no-drag;
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+}
+
+.tray-menu-item:hover:not(:disabled),
+.tray-menu-item:focus-visible {
+  background: var(--accent-soft);
+}
+
+.tray-menu-separator {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 4px 6px;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;

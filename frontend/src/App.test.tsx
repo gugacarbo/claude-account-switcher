@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -131,5 +132,90 @@ describe("shared desktop UI", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Operation failed",
     );
+  });
+  it("navigates to settings and threshold inside the unified panel without window calls", async () => {
+    const api = bridge();
+    render(<App bridge={api} view="panel" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    expect(await screen.findByText("Make it work for you")).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Auto-switch threshold/ }),
+    );
+    expect(await screen.findByText("Choose your limit")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByText("Make it work for you")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByText("Ada")).toBeVisible();
+    expect(api.call).not.toHaveBeenCalled();
+  });
+
+  it("renders the shared window header with drag region, settings and close", async () => {
+    const api = bridge();
+    render(<App bridge={api} view="panel" />);
+    expect(await screen.findByTestId("window-drag")).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "A little more room." }),
+    ).toBeVisible();
+    expect(api.call).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(api.call).toHaveBeenCalledWith("CloseWindow", "panel"),
+    );
+  });
+
+  it("follows desktop navigate events through the bridge subscription", async () => {
+    let navigate: ((section: string) => void) | null = null;
+    const api: Bridge = {
+      ...bridge(),
+      subscribeNavigation: (cb) => {
+        navigate = cb;
+        return () => {};
+      },
+    };
+    render(<App bridge={api} view="panel" />);
+    await screen.findByText("Ada");
+    await act(async () => navigate?.("settings"));
+    expect(screen.getByText("Make it work for you")).toBeVisible();
+    await act(async () => navigate?.("threshold"));
+    expect(screen.getByText("Choose your limit")).toBeVisible();
+    await act(async () => navigate?.("bogus"));
+    expect(screen.getByText("Choose your limit")).toBeVisible();
+  });
+
+  it("keeps auxiliary windows opening the desktop way when not unified", async () => {
+    const api = bridge();
+    render(<App bridge={api} view="settings" />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Auto-switch threshold/ }),
+    );
+    await waitFor(() =>
+      expect(api.call).toHaveBeenCalledWith("OpenWindow", "threshold"),
+    );
+  });
+
+  it("renders the tray dropdown from signed state and forwards its two commands", async () => {
+    const api = bridge();
+    render(<App bridge={api} view="menu" />);
+    expect(
+      await screen.findByRole("menu", { name: "Application menu" }),
+    ).toBeVisible();
+    expect(screen.queryByTestId("window-drag")).toBeNull();
+    // The switcher lists accounts from the signed UIState...
+    expect(
+      await screen.findByRole("menuitemradio", { name: /Lin/ }),
+    ).toBeVisible();
+    // ...and switching forwards the existing command with the UUID.
+    fireEvent.click(screen.getByRole("menuitemradio", { name: /Lin/ }));
+    await waitFor(() =>
+      expect(api.call).toHaveBeenCalledWith("SwitchAccount", "b"),
+    );
+    // The dropdown stays open (feedback) and Open/Quit still work.
+    expect(screen.getByRole("menuitemradio", { name: /Lin/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open panel" }));
+    await waitFor(() =>
+      expect(api.call).toHaveBeenCalledWith("OpenWindow", "panel"),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Quit" }));
+    await waitFor(() => expect(api.call).toHaveBeenCalledWith("Quit"));
   });
 });

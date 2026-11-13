@@ -5,11 +5,13 @@ export function Settings({
   t,
   disabled,
   act,
+  onOpenThreshold,
 }: {
   state: UIState;
   t: T;
   disabled: boolean;
   act: (method: string, ...args: unknown[]) => Promise<boolean>;
+  onOpenThreshold?: () => void;
 }) {
   const options: [keyof UIState, string, string, string, string][] = [
     [
@@ -69,7 +71,11 @@ export function Settings({
       <button
         type="button"
         className="threshold-link"
-        onClick={() => act("OpenWindow", "threshold")}
+        onClick={() =>
+          onOpenThreshold
+            ? onOpenThreshold()
+            : void act("OpenWindow", "threshold")
+        }
       >
         <span>
           {t("Auto-switch threshold", "自动切换阈值")}

@@ -32,9 +32,129 @@ const initialState: UIState = {
   resume: null,
 };
 
-it("discards a cancelled draft on every threshold opening, not on unrelated updates", async () => {
+async function openThreshold(state = initialState): Promise<void> {
+  fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /Auto-switch threshold/ }),
+  );
+  await screen.findByRole("spinbutton");
+  expect(state.threshold).toBeGreaterThan(0);
+}
+
+it("preserves a threshold draft across unrelated updates and discards it on cancel", async () => {
   let notify = () => {};
-  let state = { ...initialState, thresholdOpening: 1 };
+  let state = { ...initialState };
+  const calls: unknown[][] = [];
+  const bridge: Bridge = {
+    state: async () => ({ ...state }),
+    call: async (method, ...args) => {
+      calls.push([method, ...args]);
+    },
+    subscribe: (callback) => {
+      notify = callback;
+      return () => {};
+    },
+  };
+  render(<App bridge={bridge} view="panel" />);
+  await openThreshold(state);
+  fireEvent.change(screen.getByRole("spinbutton"), {
+    target: { value: "85" },
+  });
+  state = { ...state, status: "unrelated update" };
+  await act(async () => notify());
+  expect(screen.getByRole("spinbutton")).toHaveValue(85);
+  // Unified navigation must not ask the desktop for windows.
+  expect(calls).toEqual([]);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(await screen.findByText("Make it work for you")).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: /Auto-switch threshold/ }),
+  );
+  expect(await screen.findByRole("spinbutton")).toHaveValue(96);
+});
+
+it("returns to settings only after SetThreshold succeeds without closing windows", async () => {
+  let notify = () => {};
+  let state = { ...initialState };
+  const calls: unknown[][] = [];
+  let resolveSave: (() => void) | null = null;
+  const bridge: Bridge = {
+    state: async () => ({ ...state }),
+    call: (method, ...args) => {
+      calls.push([method, ...args]);
+      if (method === "SetThreshold") {
+        return new Promise((resolve) => {
+          resolveSave = () => resolve(undefined);
+        });
+      }
+      return Promise.resolve(undefined);
+    },
+    subscribe: (callback) => {
+      notify = callback;
+      return () => {};
+    },
+  };
+  render(<App bridge={bridge} view="panel" />);
+  await openThreshold(state);
+  fireEvent.change(screen.getByRole("spinbutton"), {
+    target: { value: "85" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Set threshold" }));
+  expect(screen.getByText("Choose your limit")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Set threshold" })).toBeDisabled();
+  await act(async () => resolveSave?.());
+  expect(await screen.findByText("Make it work for you")).toBeVisible();
+  expect(calls).toContainEqual(["SetThreshold", 85]);
+  expect(calls.every(([method]) => method !== "CloseWindow")).toBe(true);
+  // Reopening shows the value the backend accepted.
+  state = { ...state, threshold: 85 };
+  await act(async () => notify());
+  fireEvent.click(
+    screen.getByRole("button", { name: /Auto-switch threshold/ }),
+  );
+  expect(await screen.findByRole("spinbutton")).toHaveValue(85);
+});
+
+it("keeps the threshold screen and the draft when saving fails", async () => {
+  const bridge: Bridge = {
+    state: async () => ({ ...initialState }),
+    call: vi.fn().mockRejectedValue(new Error("Save failed")),
+    subscribe: () => () => {},
+  };
+  render(<App bridge={bridge} view="panel" />);
+  await openThreshold(initialState);
+  fireEvent.change(screen.getByRole("spinbutton"), {
+    target: { value: "85" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Set threshold" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Save failed");
+  expect(screen.getByText("Choose your limit")).toBeVisible();
+  expect(screen.getByRole("spinbutton")).toHaveValue(85);
+});
+
+it("closes the panel window from any unified screen without opening windows", async () => {
+  const call = vi.fn().mockResolvedValue(undefined);
+  const bridge: Bridge = {
+    state: async () => ({ ...initialState }),
+    call,
+    subscribe: () => () => {},
+  };
+  render(<App bridge={bridge} view="panel" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Close" }));
+  await waitFor(() =>
+    expect(call).toHaveBeenCalledWith("CloseWindow", "panel"),
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() =>
+    expect(call).toHaveBeenNthCalledWith(2, "CloseWindow", "panel"),
+  );
+  expect(call).not.toHaveBeenCalledWith("OpenWindow", expect.anything());
+});
+
+it("updates a clean threshold draft when the backend setting changes", async () => {
+  let notify = () => {};
+  let state = { ...initialState };
   const bridge: Bridge = {
     state: async () => ({ ...state }),
     call: async () => {},
@@ -43,24 +163,12 @@ it("discards a cancelled draft on every threshold opening, not on unrelated upda
       return () => {};
     },
   };
-  render(<App bridge={bridge} view="threshold" />);
-  fireEvent.change(await screen.findByRole("spinbutton"), {
-    target: { value: "85" },
-  });
-  await act(async () => notify());
-  expect(screen.getByRole("spinbutton")).toHaveValue(85);
-  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-  await act(async () => {});
-  state = { ...state, thresholdOpening: 2 };
-  await act(async () => notify());
+  render(<App bridge={bridge} view="panel" />);
+  await openThreshold(state);
   expect(screen.getByRole("spinbutton")).toHaveValue(96);
-  // Native close only hides the webview too; reopening must reset that draft.
-  fireEvent.change(screen.getByRole("spinbutton"), {
-    target: { value: "90" },
-  });
-  state = { ...state, thresholdOpening: 3 };
+  state = { ...state, threshold: 85 };
   await act(async () => notify());
-  expect(screen.getByRole("spinbutton")).toHaveValue(96);
+  await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveValue(85));
 });
 
 it("pauses resume on checkbox interaction and allows confirmation past the original deadline", async () => {
@@ -101,22 +209,4 @@ it("pauses resume on checkbox interaction and allows confirmation past the origi
   fireEvent.click(screen.getByRole("button", { name: "Continue selected" }));
   await act(async () => {});
   expect(calls).toContainEqual(["AnswerResume", "p", [false]]);
-});
-
-it("updates a reused threshold window when the backend setting changes", async () => {
-  let notify = () => {};
-  let state = { ...initialState };
-  const bridge: Bridge = {
-    state: async () => state,
-    call: vi.fn(),
-    subscribe: (callback) => {
-      notify = callback;
-      return () => {};
-    },
-  };
-  render(<App bridge={bridge} view="threshold" />);
-  expect(await screen.findByRole("spinbutton")).toHaveValue(96);
-  state = { ...state, threshold: 85 };
-  notify();
-  await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveValue(85));
 });
