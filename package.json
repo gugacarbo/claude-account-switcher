@@ -22,6 +22,7 @@
     "knip": "knip",
     "knip:production": "knip --production",
     "check:architecture": "bun scripts/check-architecture.ts",
+    "check:ui": "bun scripts/check-ui.ts",
     "check:contract": "go test -count=1 -tags headless -run \"TestUI(Contract|DTOContract)\" ./internal/app",
     "secrets:check": "gitleaks git --redact",
     "security:go": "govulncheck -tags headless ./...",

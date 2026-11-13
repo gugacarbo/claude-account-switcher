@@ -1,0 +1,37 @@
+{
+  "allowed": [],
+  "uncovered": [
+    {
+      "file": "frontend/src/features/accounts/AccountCard.tsx",
+      "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
+    },
+    {
+      "file": "frontend/src/features/accounts/Meter.tsx",
+      "reason": "legacy presentational component covered through AccountCard in App.test.tsx"
+    },
+    {
+      "file": "frontend/src/features/resume/Resume.tsx",
+      "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
+    },
+    {
+      "file": "frontend/src/features/settings/Settings.tsx",
+      "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
+    },
+    {
+      "file": "frontend/src/features/settings/Threshold.tsx",
+      "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
+    },
+    {
+      "file": "frontend/src/features/tray/TrayMenu.tsx",
+      "reason": "tray surface rendered by the native layer; scenario pending E2 fixtures and desktop validation (E8)"
+    },
+    {
+      "file": "frontend/src/shared/Icons.tsx",
+      "reason": "stateless icon components with no behavior; covered visually by existing stories"
+    },
+    {
+      "file": "frontend/src/shared/i18n.ts",
+      "reason": "translation helper; translations exercised through component tests, no dedicated scenario applies"
+    }
+  ]
+}
