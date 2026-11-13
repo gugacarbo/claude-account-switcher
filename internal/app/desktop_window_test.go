@@ -2,7 +2,11 @@
 
 package app
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
+)
 
 // Three native windows exist: the panel, the React tray menu, and the resume
 // prompt. Settings and threshold became sections of the panel.
@@ -84,5 +88,25 @@ func TestResumeWindowStaysFramelessPrompt(t *testing.T) {
 	}
 	if opts.MinWidth < 360 || opts.MinHeight < 360 {
 		t.Fatal("resume minimum size below 360")
+	}
+}
+
+// Linux hosts do not forward click coordinates, so the dropdown is anchored to
+// the top-right corner of the work area instead of the screen centre.
+func TestMenuPositionAnchorsToWorkAreaTopRight(t *testing.T) {
+	area := application.Rect{X: 1920, Y: 0, Width: 1920, Height: 1080}
+	x, y := menuPosition(area, 232, 116, 8)
+	if x != area.X+area.Width-232-8 {
+		t.Fatalf("x = %d, want anchored to the right edge", x)
+	}
+	if y != area.Y+8 {
+		t.Fatalf("y = %d, want anchored to the top edge", y)
+	}
+
+	// A work area shorter than the menu keeps the window inside the margins.
+	small := application.Rect{X: 0, Y: 0, Width: 200, Height: 100}
+	x, y = menuPosition(small, 232, 116, 8)
+	if x != 8 || y != 8 {
+		t.Fatalf("small work area gave %d,%d, want the top-left margin", x, y)
 	}
 }

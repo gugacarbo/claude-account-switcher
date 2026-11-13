@@ -48,6 +48,24 @@ func windowOptions(name string) application.WebviewWindowOptions {
 	return opts
 }
 
+// menuPosition anchors the tray dropdown to the top-right corner of the work
+// area. Linux StatusNotifier hosts do not forward click coordinates, and Wails
+// then centres the window, so the position is computed from the screen instead.
+func menuPosition(area application.Rect, width, height, margin int) (int, int) {
+	x := area.X + area.Width - width - margin
+	if x < area.X+margin {
+		x = area.X + margin
+	}
+	y := area.Y + margin
+	if y+height > area.Y+area.Height {
+		y = area.Y + area.Height - height - margin
+	}
+	if y < area.Y+margin {
+		y = area.Y + margin
+	}
+	return x, y
+}
+
 func runDesktop(s *switcher, lock net.Listener) {
 	hub := newResumeHub()
 	service := &UIService{s: s, prompts: hub}
@@ -93,13 +111,27 @@ func runDesktop(s *switcher, lock net.Listener) {
 	showMenu := func() {
 		// The tray dropdown is a React window placed under the icon, so it
 		// keeps the app styling instead of the host menu implementation.
-		// Repositioning on every click follows the icon wherever it sits.
-		if err := tray.PositionWindow(menuWin, 6); err != nil {
+		// Linux hosts do not forward the click coordinates, and Wails then
+		// falls back to the centre of the screen, so the anchor is computed
+		// from the work area instead.
+		if screen, err := panel.GetScreen(); err == nil && screen != nil {
+			area := screen.WorkArea
+			if area.Width <= 0 || area.Height <= 0 {
+				area = screen.Bounds
+			}
+			width, height := menuWin.Size()
+			x, y := menuPosition(area, width, height, 8)
+			menuWin.SetPosition(x, y)
+		} else if err := tray.PositionWindow(menuWin, 6); err != nil {
 			menuWin.Center()
 		}
 		menuWin.Show().Focus()
 	}
+	// The Linux StatusNotifier host reports a plain click as a menu request and
+	// only raises Activate on a double click, so the secondary click opens the
+	// same dropdown and gives the tray a single-action entry point.
 	tray.OnClick(showMenu)
+	tray.OnRightClick(showMenu)
 	service.open = func(section string) {
 		showPanel()
 		app.Event.Emit("navigate", section)
