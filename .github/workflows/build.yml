@@ -30,7 +30,11 @@ jobs:
             flags: -s -w
     runs-on: ${{ matrix.os }}
     steps:
+      # O checkout padrão é raso; check:ui (via validate) precisa de
+      # origin/main e do merge-base com HEAD para o gate prune-only.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod

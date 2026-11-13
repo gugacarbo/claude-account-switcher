@@ -10,16 +10,38 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
       - run: bun install --frozen-lockfile
       - run: bun run build:storybook
+      # --with-deps instala as bibliotecas de sistema do Chromium no runner;
+      # sem elas, o navegador não sobe em ubuntu-24.04.
       - run: bunx playwright install --with-deps chromium
         working-directory: frontend
       - run: bun run test:visual
-      - uses: actions/upload-artifact@v4
+      # Baselines aprovadas ficam versionadas no repositório (frontend/
+      # visual/*-snapshots/): este upload só publica as imagens geradas
+      # no CI como evidência — não substitui as baselines versionadas
+      # até existir alternativa comprovada de armazenamento de snapshots.
+      - name: Upload screenshots (success)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-screenshots
+          path: frontend/visual/**/*-snapshots/*.png
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Upload visual differences (failure)
         if: failure()
+        uses: actions/upload-artifact@v4
         with:
           name: visual-differences
-          path: frontend/test-results/
+          path: |
+            frontend/test-results/
+            frontend/visual/**/*-diff.png
+            frontend/visual/**/*-actual.png
+          retention-days: 14
+          if-no-files-found: warn

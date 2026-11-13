@@ -110,3 +110,19 @@ importados entre features (gate `check:architecture`); reuso acontece via
 Comandos: `bun run check:ui` (verifica), `bun run check:ui -- --prune-baseline`
 (remove entradas obsoletas da baseline; nunca adiciona). CI e pre-commit
 executam o gate via `validate`/`validate:staged`.
+
+## Evidência em PRs de UI
+
+PRs que alteram `frontend/src` ou snapshots em `frontend/visual/**-snapshots/`
+precisam, no corpo, da seção `## UI changes` do template (tela irmã/reuso,
+evidências antes/depois e parecer de revisão independente OU declaração
+explícita de incapacidade visual, com aprovação visual pendente). O gate
+`bun run check:pr-evidence` (workflow `pr-ui-evidence`) atesta a existência
+dessas seções — **não** valida o conteúdo nem garante aprovação visual, que
+permanece responsabilidade do revisor humano.
+
+Limitações da matriz visual: o Playwright executa Chromium headless em
+Linux CI (520×720, en-US, claro). Ele **não** executa Windows (WebView2),
+macOS (WebKit) nem Linux GTK/WebKit nativos; comparação de pixels entre
+essas renderizações não é coberta e não deve ser afirmada em PRs. Aceitação
+visual nativa segue o checklist de `docs/ui-development.md`.

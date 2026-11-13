@@ -12,7 +12,8 @@
     "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build",
     "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots"
+    "test:visual:update": "playwright test --update-snapshots",
+    "capture:story": "bun ../scripts/capture-story.ts"
   },
   "dependencies": {
     "react": "19.2.0",
