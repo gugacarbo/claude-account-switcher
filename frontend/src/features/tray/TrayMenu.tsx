@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Account, Bridge, UIState } from "../../bridge";
+import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
 import { Separator } from "../../components/ui/separator";
 import type { T } from "../../shared/i18n";
@@ -61,9 +62,11 @@ export function TrayMenu({
                 a.active ? run("CloseWindow", "menu") : switchTo(a)
               }
             >
-              <span className="tray-menu-avatar" aria-hidden="true">
-                {(label(a) || "?").slice(0, 1).toUpperCase()}
-              </span>
+              <Avatar className="tray-menu-avatar" aria-hidden="true">
+                <AvatarFallback>
+                  {(label(a) || "?").slice(0, 1).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <span className="tray-menu-identity">
                 <strong>{label(a)}</strong>
                 <small>{usageSummary(a, t)}</small>

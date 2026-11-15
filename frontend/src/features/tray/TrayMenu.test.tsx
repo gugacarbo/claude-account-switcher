@@ -52,6 +52,21 @@ describe("TrayMenu", () => {
     expect(rows[1]).toHaveAttribute("aria-checked", "false");
     expect(rows[1]).toHaveTextContent("5h 8% · Week 31%");
     expect(rows[2]).toHaveTextContent("sam@example.com");
+    // Composição shadcn: linhas são Buttons, iniciais vêm do Avatar Radix.
+    for (const row of rows) {
+      expect(row).toHaveAttribute("data-slot", "button");
+      const avatar = row.querySelector('[data-slot="avatar"]');
+      expect(avatar).toHaveClass("tray-menu-avatar");
+      expect(
+        avatar?.querySelector('[data-slot="avatar-fallback"]'),
+      ).not.toBeNull();
+    }
+    expect(
+      rows[0].querySelector('[data-slot="avatar-fallback"]'),
+    ).toHaveTextContent("A");
+    expect(
+      rows[2].querySelector('[data-slot="avatar-fallback"]'),
+    ).toHaveTextContent("S");
   });
 
   it("tells accounts with the same name apart by email", () => {
@@ -108,6 +123,27 @@ describe("TrayMenu", () => {
     expect(
       screen.getByRole("menuitemradio", { name: /Lin Chen/ }),
     ).toBeDisabled();
+  });
+
+  it("opens the panel and quits through shadcn menu items", async () => {
+    const bridge = fakeBridge();
+    render(<TrayMenu bridge={bridge} state={makeUiState({ accounts })} />);
+    const separator = document.querySelector('[data-slot="separator"]');
+    expect(separator).toHaveClass("tray-menu-separator");
+    const open = screen.getByRole("menuitem", { name: "Open" });
+    expect(open).toHaveAttribute("data-slot", "button");
+    expect(open).toHaveClass("tray-menu-item");
+    fireEvent.click(open);
+    await waitFor(() =>
+      expect(bridge.calls).toContainEqual({
+        method: "OpenWindow",
+        args: ["panel"],
+      }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Quit" }));
+    await waitFor(() =>
+      expect(bridge.calls).toContainEqual({ method: "Quit", args: [] }),
+    );
   });
 
   it("speaks Chinese and handles an empty list", () => {
