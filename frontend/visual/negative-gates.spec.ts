@@ -24,7 +24,7 @@ test("gate detects injected horizontal overflow (negative, deterministic)", asyn
   );
   const overflow = await readOverflow(page);
   expect(overflow).not.toBe("");
-  expect(overflow).toMatch(/2000px|right=/i);
+  expect(overflow).toMatch(/scrollWidth 2000|right=/i);
 });
 
 test("gate passes on a clean page (control)", async ({ page }) => {
