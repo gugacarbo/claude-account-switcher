@@ -2,26 +2,6 @@
   "allowed": [],
   "uncovered": [
     {
-      "file": "frontend/src/features/accounts/AccountCard.tsx",
-      "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
-    },
-    {
-      "file": "frontend/src/features/accounts/Meter.tsx",
-      "reason": "legacy presentational component covered through AccountCard in App.test.tsx"
-    },
-    {
-      "file": "frontend/src/features/resume/Resume.tsx",
-      "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
-    },
-    {
-      "file": "frontend/src/features/settings/Settings.tsx",
-      "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
-    },
-    {
-      "file": "frontend/src/features/settings/Threshold.tsx",
-      "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
-    },
-    {
       "file": "frontend/src/shared/Icons.tsx",
       "reason": "stateless icon components with no behavior; covered visually by existing stories"
     },
