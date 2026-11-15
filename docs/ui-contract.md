@@ -104,10 +104,11 @@ importados entre features (gate `check:architecture`); reuso acontece via
 Instalado via CLI (`components.json` em `frontend/`, estilo `radix-nova`,
 biblioteca Radix). Primitives em `frontend/src/components/ui/`, importáveis
 por `@/components/ui/<nome>`; `cn` vem de `@/lib/utils`. Componentes
-adicionados espelham o que as telas já usam: `button`, `card`, `progress`,
+adicionados espelham o que as telas usam: `button`, `card`, `progress`,
 `checkbox`, `slider`, `input`, `label`, `badge`, `avatar`, `separator`,
-`alert`. Eles ainda **não** substituem as classes das telas atuais — a
-migração de cada tela é decisão de revisão com evidência visual (E7 da epic).
+`alert`. As telas (`App`, `WindowHeader`, accounts, settings, threshold,
+resume, tray) já consomem esses primitives; a aparência continua vindo das
+classes unlayered do app, que vencem as utilities do kit (E7 da epic).
 
 Regras de integração (todas verificadas por gate ou teste irmão):
 
@@ -126,10 +127,15 @@ Regras de integração (todas verificadas por gate ou teste irmão):
   `bg-accent → --accent-soft` no `@theme inline`.
 - Cada componente de `components/ui` tem teste irmão (regra de cobertura
   abaixo vale igual para o kit) e nenhum hex literal fora de `style.css`.
-- Desvios deliberados do registry, mantidos em reinstall: `Progress`
-  repassa `value` ao Root (aria-valuenow), o thumb do `Slider` usa
-  `bg-card` em vez de `bg-white`, e o import de `cn` passa por
-  `@/lib/utils`.
+- Bases aparadas (desvio deliberado, mantido em reinstall): para preservar
+  os pixels versionados, a base de cada primitive foi reduzida ao mínimo
+  estrutural (`data-slot` + estrutura Radix), deferindo sizing/cor/borda/raio
+  às classes do app — ex.: `.setting [data-slot="checkbox"]`,
+  `.threshold-card [data-slot="slider"]`, `.meter [data-slot="progress"]`.
+  As variantes nomeadas (`variant`/`size` do `Button`) permanecem para telas
+  novas. `Progress` repassa `value` ao Root (aria-valuenow); o `Slider`
+  encaminha `aria-label`/`aria-labelledby` ao thumb (role=slider focável); o
+  import de `cn` passa por `@/lib/utils`.
 
 Para adicionar um componente: `bunx --bun shadcn@latest add <nome>` em
 `frontend/`, criar o teste irmão, revisar tokens/classes geradas contra
