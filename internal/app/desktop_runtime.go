@@ -38,8 +38,8 @@ func windowOptions(name string) application.WebviewWindowOptions {
 		opts.HideOnFocusLost = true
 		opts.HideOnEscape = true
 	case "menu":
-		opts.Width, opts.Height = menuWidth, menuHeight(1)
-		opts.MinWidth, opts.MinHeight = 180, 96
+		opts.Width, opts.Height = 320, 440
+		opts.MinWidth, opts.MinHeight = 280, 240
 		opts.AlwaysOnTop = true
 		opts.HideOnFocusLost = true
 		opts.HideOnEscape = true
@@ -50,74 +50,11 @@ func windowOptions(name string) application.WebviewWindowOptions {
 	return opts
 }
 
-// menuWidth and menuHeight size the React tray dropdown. The heights mirror
-// the fixed .tray-menu* rows in frontend/src/style.css: border and padding,
-// the "Accounts" heading, one row per account (or the empty line), the
-// separator and the Open/Quit items. Past maxMenuAccounts the list scrolls.
-const (
-	menuWidth       = 300
-	maxMenuAccounts = 6
-)
-
-func menuHeight(accounts int) int {
-	const chrome = 2 + 16 + 28 + 9 + 2*36
-	if accounts <= 0 {
-		return chrome + 36
-	}
-	return chrome + min(accounts, maxMenuAccounts)*52
-}
-
-// menuPosition anchors the tray dropdown to the top-right corner of the work
-// area. Linux StatusNotifier hosts do not forward click coordinates, and Wails
-// then centres the window, so the position is computed from the screen instead.
-func menuPosition(area application.Rect, width, height, margin int) (int, int) {
-	x := area.X + area.Width - width - margin
-	if x < area.X+margin {
-		x = area.X + margin
-	}
-	y := area.Y + margin
-	if y+height > area.Y+area.Height {
-		y = area.Y + area.Height - height - margin
-	}
-	if y < area.Y+margin {
-		y = area.Y + margin
-	}
-	return x, y
-}
-
-// menuAnchor places the tray dropdown under the tray icon. probeX/probeY are
-// where Wails would put the window for the last tray click: centred on the
-// click when the host forwards its coordinates, centred on the screen when it
-// does not. In the second case the top-right corner of the work area is used;
-// otherwise the dropdown keeps the click's column and hugs the panel edge.
-func menuAnchor(area, bounds application.Rect, width, height, margin, probeX, probeY int) (int, int) {
-	if probeX == bounds.X+bounds.Width/2-width/2 && probeY == bounds.Y+bounds.Height/2-height/2 {
-		return menuPosition(area, width, height, margin)
-	}
-	x := min(probeX, area.X+area.Width-width-margin)
-	x = max(x, area.X+margin)
-	y := area.Y + margin
-	if probeY+height/2 > bounds.Y+bounds.Height/2 {
-		y = max(y, area.Y+area.Height-height-margin)
-	}
-	return x, y
-}
-
-// positionProbe records where the tray would place a window without moving it.
-type positionProbe struct {
-	application.Window
-	x, y int
-	set  bool
-}
-
-func (p *positionProbe) SetPosition(x, y int) { p.x, p.y, p.set = x, y, true }
-
 // usesNativeTrayMenu reports whether the tray dropdown has to be drawn by the
-// desktop instead of React. A native Wayland client cannot place its own
-// window, so a React popover cannot be anchored to the icon there; X11 (which
-// includes XWayland, see preferXWayland), Windows and macOS honour the position
-// and keep the React dropdown. SWITCHER_TRAY_MENU forces a mode ("native" or
-// "react") when validating on a specific desktop.
+// desktop instead of React. Wayland compositors refuse to place a client window,
+// so a React popover cannot be anchored to the icon there; X11, Windows and
+// macOS honour the position and keep the React dropdown. SWITCHER_TRAY_MENU
+// forces a mode ("native" or "react") when validating on a specific desktop.
 func usesNativeTrayMenu(getenv func(string) string) bool {
 	if runtime.GOOS != "linux" {
 		return false
@@ -128,30 +65,23 @@ func usesNativeTrayMenu(getenv func(string) string) bool {
 	case "react":
 		return false
 	}
-	return isWaylandSession(getenv) && getenv("GDK_BACKEND") != "x11"
-}
-
-func isWaylandSession(getenv func(string) string) bool {
 	return getenv("WAYLAND_DISPLAY") != "" || getenv("XDG_SESSION_TYPE") == "wayland"
 }
 
-// preferXWayland reports whether GTK should be started on the X11 backend
-// inside a Wayland session. Through XWayland the app may position its own
-// windows, which keeps the React tray dropdown anchored instead of falling back
-// to the host menu. An explicit GDK_BACKEND, a forced native menu or a session
-// without an X server is left alone.
-func preferXWayland(getenv func(string) string) bool {
-	if runtime.GOOS != "linux" || !isWaylandSession(getenv) {
-		return false
-	}
-	return getenv("GDK_BACKEND") == "" && getenv("DISPLAY") != "" && getenv("SWITCHER_TRAY_MENU") != "native"
+type trayMenuWindow interface {
+	Show() application.Window
+	Focus()
+}
+
+func showPositionedTrayMenu(win trayMenuWindow, position func()) {
+	// GTK4 creates the native surface on Show. Moving a hidden, unrealized
+	// window is a no-op even on X11, so the anchor must be applied afterwards.
+	win.Show()
+	position()
+	win.Focus()
 }
 
 func runDesktop(s *switcher, lock net.Listener) {
-	// Must run before GTK initialises, which happens inside application.New.
-	if preferXWayland(os.Getenv) {
-		_ = os.Setenv("GDK_BACKEND", "x11")
-	}
 	hub := newResumeHub()
 	service := &UIService{s: s, prompts: hub}
 	assets, err := fs.Sub(frontendAssets, "dist")
@@ -161,11 +91,6 @@ func runDesktop(s *switcher, lock net.Listener) {
 	registerUIBindings()
 	app := application.New(application.Options{Name: appName(), Description: "Independent account switching utility", Services: []application.Service{application.NewService(service)}, Assets: application.AssetOptions{Handler: application.BundledAssetFileServer(assets)}, Mac: application.MacOptions{ActivationPolicy: application.ActivationPolicyAccessory}})
 	tray := app.SystemTray.New()
-	if runtime.GOOS == "linux" {
-		// Wails publishes the label as the StatusNotifierItem Id, "Wails" when
-		// unset; the GNOME Shell extension finds the app's icon by this Id.
-		tray.SetLabel(appName())
-	}
 	tray.SetIcon(trayIcon(-1, defaultThreshold))
 	tray.SetTooltip(appName())
 	windows := map[string]*application.WebviewWindow{}
@@ -198,48 +123,19 @@ func runDesktop(s *switcher, lock net.Listener) {
 		}
 		panel.Show().Focus()
 	}
-	menuTarget := func() (int, int, bool) {
-		// The primary screen is used because a window that was never shown
-		// has no screen of its own yet.
-		screen := app.Screen.GetPrimary()
-		if screen == nil {
-			screen, _ = menuWin.GetScreen()
-		}
-		if screen == nil {
-			return 0, 0, false
-		}
-		area := screen.WorkArea
-		if area.Width <= 0 || area.Height <= 0 {
-			area = screen.Bounds
-		}
-		width, height := menuWin.Size()
-		probe := &positionProbe{Window: menuWin}
-		if err := tray.PositionWindow(probe, 0); err != nil || !probe.set {
-			x, y := menuPosition(area, width, height, 8)
-			return x, y, true
-		}
-		x, y := menuAnchor(area, screen.Bounds, width, height, 8, probe.x, probe.y)
-		return x, y, true
-	}
 	showMenu := func() {
-		// The tray dropdown is a React window placed under the icon, so it
-		// keeps the app styling instead of the host menu implementation.
-		menuWin.SetSize(menuWidth, menuHeight(len(s.snapshot().Accounts)))
-		x, y, ok := menuTarget()
-		if ok {
-			menuWin.SetPosition(x, y)
-		} else {
-			menuWin.Center()
-		}
-		menuWin.Show().Focus()
-		// X11 window managers place a window themselves when it is mapped and
-		// ignore the position requested before that, so it is applied again.
-		if ok {
-			menuWin.SetPosition(x, y)
-		}
+		showPositionedTrayMenu(menuWin, func() {
+			// On Linux Wails stores the coordinates supplied by Activate or
+			// SecondaryActivate before invoking this handler. Do not query the
+			// live cursor: it may already have moved away from the tray icon.
+			// On Windows/macOS this uses the native tray icon geometry.
+			if err := tray.PositionWindow(menuWin, 6); err != nil {
+				log.Printf("position tray dropdown: %v", err)
+			}
+		})
 	}
-	// A native Wayland client cannot place its window, so the dropdown falls back
-	// to the host menu there; elsewhere the React popover is anchored to the work area.
+	// Wayland refuses to place a client window, so the dropdown falls back to the
+	// host menu there; elsewhere the React popover is anchored to the work area.
 	if usesNativeTrayMenu(os.Getenv) {
 		menu := app.NewMenu()
 		updateTrayMenu(menu, service, showPanel)

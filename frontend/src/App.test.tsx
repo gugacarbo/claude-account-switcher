@@ -193,14 +193,25 @@ describe("shared desktop UI", () => {
     );
   });
 
-  it("renders the tray dropdown and forwards its two commands", async () => {
+  it("renders the tray dropdown from signed state and forwards its two commands", async () => {
     const api = bridge();
     render(<App bridge={api} view="menu" />);
     expect(
       await screen.findByRole("menu", { name: "Application menu" }),
     ).toBeVisible();
     expect(screen.queryByTestId("window-drag")).toBeNull();
-    fireEvent.click(screen.getByRole("menuitem", { name: "Open" }));
+    // The switcher lists accounts from the signed UIState...
+    expect(
+      await screen.findByRole("menuitemradio", { name: /Lin/ }),
+    ).toBeVisible();
+    // ...and switching forwards the existing command with the UUID.
+    fireEvent.click(screen.getByRole("menuitemradio", { name: /Lin/ }));
+    await waitFor(() =>
+      expect(api.call).toHaveBeenCalledWith("SwitchAccount", "b"),
+    );
+    // The dropdown stays open (feedback) and Open/Quit still work.
+    expect(screen.getByRole("menuitemradio", { name: /Lin/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open panel" }));
     await waitFor(() =>
       expect(api.call).toHaveBeenCalledWith("OpenWindow", "panel"),
     );

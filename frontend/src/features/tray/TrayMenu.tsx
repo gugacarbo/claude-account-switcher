@@ -1,117 +1,194 @@
-import { useEffect, useRef } from "react";
-import type { Account, Bridge, UIState } from "../../bridge";
-import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { Button } from "../../components/ui/button";
-import { Separator } from "../../components/ui/separator";
+import { useEffect, useRef, useState } from "react";
+import type { Account, UIState } from "../../bridge";
 import type { T } from "../../shared/i18n";
 
-// The tray dropdown is its own frameless window (?view=menu), so it keeps the
-// app styling instead of the host menu implementation. It lists the accounts
-// with their usage so one click switches, then opens the panel or quits.
-// The window height is computed in Go (menuHeight in desktop_runtime.go) from
-// the fixed row heights of .tray-menu* in style.css; keep them in sync.
+// The tray dropdown is its own frameless window (?view=menu). App keeps the
+// signed UIState and the switch error; this component only renders it. Switch
+// success never hides the menu: the list stays up so the user sees the new
+// active account highlighted before the dropdown closes.
 export function TrayMenu({
-  bridge,
   state,
+  lang,
+  pending,
+  error,
+  onSwitch,
+  onOpenPanel,
+  onQuit,
+  onEscape,
 }: {
-  bridge: Bridge;
   state: UIState | null;
+  lang: string;
+  pending: boolean;
+  error: string;
+  onSwitch: (id: string) => void;
+  onOpenPanel: () => void;
+  onQuit: () => void;
+  onEscape?: () => void;
 }) {
-  const t: T = (en, zh) => (state?.lang === "zh-CN" ? zh : en);
-  const first = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    first.current?.focus();
-  }, []);
-  // Failures stay silent on purpose: the window closes itself when a command
-  // cannot run, and there is no room for an error banner in a dropdown.
-  const run = (method: string, ...args: unknown[]) =>
-    bridge.call(method, ...args).catch(() => {});
-  const switchTo = (account: Account) => {
-    void run("SwitchAccount", account.id).then(() =>
-      run("CloseWindow", "menu"),
-    );
-  };
+  const t: T = (en, zh) => (lang === "zh-CN" ? zh : en);
   const accounts = state?.accounts ?? [];
-  // Two sign-ins often share a display name; the email tells them apart.
-  const label = (a: Account) =>
-    a.name && accounts.filter((other) => other.name === a.name).length === 1
-      ? a.name
-      : a.email || a.name;
-  const busy = !!state?.busy;
+  const disabled = pending || !!state?.busy;
+
+  // Roving focus for real keyboard navigation across the menu.
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [cursor, setCursor] = useState(0);
+
+  const loading = state === null;
+  // Focus the first enabled row once the account list is on screen.
+  useEffect(() => {
+    if (loading || accounts.length === 0) return;
+    const index = itemRefs.current.findIndex((el) => el && !el.disabled);
+    if (index >= 0) {
+      itemRefs.current[index]?.focus();
+      setCursor(index);
+    }
+  }, [loading, accounts.length]);
+
+  // Roving focus skips disabled entries (the active account and, while busy,
+  // every row), wrapping around the list.
+  const step = (from: number, delta: 1 | -1) => {
+    for (let i = 1; i <= accounts.length; i++) {
+      const index = (from + delta * i + accounts.length * i) % accounts.length;
+      const el = itemRefs.current[index];
+      if (el && !el.disabled) return index;
+    }
+    return -1;
+  };
+
+  const focusAt = (index: number) => {
+    const el = itemRefs.current[index];
+    if (el) {
+      el.focus();
+      setCursor(index);
+    }
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onEscape?.();
+      return;
+    }
+    if (disabled || accounts.length === 0) return;
+    const move = (index: number) => {
+      event.preventDefault();
+      if (index >= 0) focusAt(index);
+    };
+    switch (event.key) {
+      case "ArrowDown":
+        return move(step(cursor, 1));
+      case "ArrowUp":
+        return move(step(cursor, -1));
+      case "Home": {
+        const first = itemRefs.current.findIndex((el) => el && !el.disabled);
+        return move(first);
+      }
+      case "End": {
+        for (let i = accounts.length - 1; i >= 0; i--) {
+          const el = itemRefs.current[i];
+          if (el && !el.disabled) return move(i);
+        }
+        return;
+      }
+      default:
+        return;
+    }
+  };
+
   return (
     <div
       className="tray-menu"
       role="menu"
       aria-label={t("Application menu", "应用菜单")}
+      onKeyDown={onKeyDown}
     >
-      <p className="tray-menu-heading" aria-live="polite">
-        {busy ? t("Switching…", "正在切换…") : t("Accounts", "账号")}
-      </p>
-      <div className="tray-menu-accounts">
-        {accounts.length ? (
-          accounts.map((a) => (
-            <Button
-              key={a.id}
-              type="button"
-              variant="ghost"
-              role="menuitemradio"
-              aria-checked={a.active}
-              className={`tray-menu-account ${a.active ? "active" : ""}`}
-              disabled={busy && !a.active}
-              onClick={() =>
-                a.active ? run("CloseWindow", "menu") : switchTo(a)
-              }
-            >
-              <Avatar className="tray-menu-avatar" aria-hidden="true">
-                <AvatarFallback>
-                  {(label(a) || "?").slice(0, 1).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <span className="tray-menu-identity">
-                <strong>{label(a)}</strong>
-                <small>{usageSummary(a, t)}</small>
-              </span>
-              {a.active ? (
-                <span className="tray-menu-check" aria-hidden="true">
-                  ●
-                </span>
-              ) : null}
-            </Button>
-          ))
-        ) : (
-          <p className="tray-menu-empty">
-            {t("No accounts yet", "还没有账号")}
-          </p>
-        )}
-      </div>
-      <Separator className="tray-menu-separator" />
-      <Button
-        ref={first}
-        type="button"
-        variant="ghost"
-        role="menuitem"
-        className="tray-menu-item"
-        onClick={() => void run("OpenWindow", "panel")}
-      >
-        {t("Open", "打开")}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        role="menuitem"
-        className="tray-menu-item"
-        onClick={() => void run("Quit")}
-      >
-        {t("Quit", "退出")}
-      </Button>
+      {state === null ? (
+        <p role="status" className="tray-menu-status">
+          {t("Connecting to your accounts…", "正在连接账号…")}
+        </p>
+      ) : (
+        <>
+          {error ? (
+            <p className="notice error tray-menu-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {state.busy ? (
+            <p role="status" className="tray-menu-status">
+              {t("Working on it…", "正在处理…")}
+            </p>
+          ) : null}
+          {accounts.length === 0 ? (
+            <p className="tray-menu-status">
+              {t("No accounts yet", "还没有账号")}
+            </p>
+          ) : (
+            <div className="tray-accounts">
+              {accounts.map((account: Account, index) => {
+                const label = account.name || account.email;
+                return (
+                  <button
+                    key={account.id}
+                    ref={(el) => {
+                      itemRefs.current[index] = el;
+                      return;
+                    }}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={account.active}
+                    className={`tray-account ${account.active ? "active" : ""}`}
+                    disabled={account.active || disabled}
+                    onClick={() => onSwitch(account.id)}
+                  >
+                    <span className="tray-account-head">
+                      <strong>{label}</strong>
+                      <span className="plan">{account.plan}</span>
+                      {account.active ? (
+                        <span className="tray-account-flag">
+                          ● {t("Active", "当前")}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="tray-account-sub">
+                      {account.email}
+                      {account.usage ? (
+                        <span className="tray-account-usage">
+                          {t(
+                            `5h ${account.usage.session}% · week ${account.usage.weekly}%`,
+                            `5小时 ${account.usage.session}% · 每周 ${account.usage.weekly}%`,
+                          )}
+                        </span>
+                      ) : null}
+                    </span>
+                    {pending && !account.active ? (
+                      <span className="tray-account-pending">
+                        {t("Switching…", "切换中…")}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <hr className="tray-menu-separator" />
+          <button
+            type="button"
+            role="menuitem"
+            className="tray-menu-item"
+            onClick={onOpenPanel}
+          >
+            {t("Open panel", "打开面板")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="tray-menu-item"
+            onClick={onQuit}
+          >
+            {t("Quit", "退出")}
+          </button>
+        </>
+      )}
     </div>
-  );
-}
-
-function usageSummary(a: Account, t: T) {
-  if (!a.usage) return a.email || t("Usage unavailable", "用量未知");
-  return t(
-    `5h ${Math.round(a.usage.session)}% · Week ${Math.round(a.usage.weekly)}%`,
-    `5 小时 ${Math.round(a.usage.session)}% · 每周 ${Math.round(a.usage.weekly)}%`,
   );
 }

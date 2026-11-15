@@ -71,8 +71,8 @@ func TestTrayMenuWindowBehavesLikeADropdown(t *testing.T) {
 	if !opts.HideOnEscape {
 		t.Fatal("tray menu must close on escape")
 	}
-	if opts.Width > 320 || opts.Height > 200 {
-		t.Fatalf("tray menu is not menu sized: %dx%d", opts.Width, opts.Height)
+	if opts.Width != 320 || opts.Height != 440 {
+		t.Fatalf("tray menu must fit quick profiles at 320x440: got %dx%d", opts.Width, opts.Height)
 	}
 	if opts.URL != "/?view=menu" {
 		t.Fatalf("tray menu url is %q", opts.URL)
@@ -89,66 +89,6 @@ func TestResumeWindowStaysFramelessPrompt(t *testing.T) {
 	}
 	if opts.MinWidth < 360 || opts.MinHeight < 360 {
 		t.Fatal("resume minimum size below 360")
-	}
-}
-
-// Linux hosts do not forward click coordinates, so the dropdown is anchored to
-// the top-right corner of the work area instead of the screen centre.
-func TestMenuPositionAnchorsToWorkAreaTopRight(t *testing.T) {
-	area := application.Rect{X: 1920, Y: 0, Width: 1920, Height: 1080}
-	x, y := menuPosition(area, 232, 116, 8)
-	if x != area.X+area.Width-232-8 {
-		t.Fatalf("x = %d, want anchored to the right edge", x)
-	}
-	if y != area.Y+8 {
-		t.Fatalf("y = %d, want anchored to the top edge", y)
-	}
-
-	// A work area shorter than the menu keeps the window inside the margins.
-	small := application.Rect{X: 0, Y: 0, Width: 200, Height: 100}
-	x, y = menuPosition(small, 232, 116, 8)
-	if x != 8 || y != 8 {
-		t.Fatalf("small work area gave %d,%d, want the top-left margin", x, y)
-	}
-}
-
-// The dropdown grows with the account list and scrolls past a handful of rows.
-func TestMenuHeightFollowsTheAccounts(t *testing.T) {
-	if got := menuHeight(0); got != 163 {
-		t.Fatalf("empty list: got %d, want 163", got)
-	}
-	if got := menuHeight(2); got != 127+2*52 {
-		t.Fatalf("two accounts: got %d, want %d", got, 127+2*52)
-	}
-	if menuHeight(20) != menuHeight(maxMenuAccounts) {
-		t.Fatal("long lists must scroll instead of growing the window")
-	}
-	if opts := windowOptions("menu"); menuHeight(0) < opts.MinHeight || menuWidth < opts.MinWidth {
-		t.Fatal("computed size must respect the window minimum")
-	}
-}
-
-// A forwarded tray click keeps the dropdown in the icon's column, under the
-// panel; without click coordinates it falls back to the work-area corner.
-func TestMenuAnchorFollowsTheTrayClick(t *testing.T) {
-	bounds := application.Rect{X: 0, Y: 0, Width: 1920, Height: 1080}
-	area := application.Rect{X: 0, Y: 32, Width: 1920, Height: 1048}
-	cases := []struct {
-		name           string
-		probeX, probeY int
-		wantX, wantY   int
-	}{
-		{"top panel click", 1400 - 116, 16, 1284, 40},
-		{"click near the right edge", 1900 - 116, 16, 1680, 40},
-		{"click near the left edge", 0, 16, 8, 40},
-		{"bottom panel click", 1284, 964, 1284, 956},
-		{"no coordinates", 844, 482, 1680, 40},
-	}
-	for _, c := range cases {
-		x, y := menuAnchor(area, bounds, 232, 116, 8, c.probeX, c.probeY)
-		if x != c.wantX || y != c.wantY {
-			t.Fatalf("%s: got %d,%d, want %d,%d", c.name, x, y, c.wantX, c.wantY)
-		}
 	}
 }
 
@@ -174,7 +114,6 @@ func TestUsesNativeTrayMenuFollowsSession(t *testing.T) {
 		{"x11", map[string]string{"XDG_SESSION_TYPE": "x11", "DISPLAY": ":0"}, false},
 		{"forced native", map[string]string{"SWITCHER_TRAY_MENU": "native"}, true},
 		{"forced react", map[string]string{"SWITCHER_TRAY_MENU": "react", "WAYLAND_DISPLAY": "wayland-0"}, false},
-		{"xwayland", map[string]string{"WAYLAND_DISPLAY": "wayland-0", "GDK_BACKEND": "x11"}, false},
 	}
 	for _, c := range cases {
 		if got := usesNativeTrayMenu(env(c.values)); got != c.want {
@@ -183,34 +122,36 @@ func TestUsesNativeTrayMenuFollowsSession(t *testing.T) {
 	}
 }
 
-// Inside a Wayland session the app starts on XWayland so the React dropdown can
-// be positioned, unless the user chose a backend or there is no X server.
-func TestPreferXWaylandOnlyWhenItCanPositionWindows(t *testing.T) {
-	env := func(values map[string]string) func(string) string {
-		return func(key string) string { return values[key] }
+// A hidden GTK4 window has no surface yet, so moving it before Show silently
+// does nothing. The dropdown must create the surface before applying its anchor.
+func TestTrayMenuPositionsAfterShowingSurface(t *testing.T) {
+	win := &unrealizedTrayWindow{}
+	showPositionedTrayMenu(win, func() { win.SetPosition(1680, 40) })
+	if win.x != 1680 || win.y != 40 {
+		t.Fatalf("menu stayed at %d,%d: position was applied before the surface existed", win.x, win.y)
 	}
-	if runtime.GOOS != "linux" {
-		if preferXWayland(env(map[string]string{"WAYLAND_DISPLAY": "wayland-0", "DISPLAY": ":0"})) {
-			t.Fatal("non-linux hosts never switch backend")
-		}
-		return
+	if !win.focused {
+		t.Fatal("menu must receive focus after positioning")
 	}
-	cases := []struct {
-		name   string
-		values map[string]string
-		want   bool
-	}{
-		{"wayland with xwayland", map[string]string{"WAYLAND_DISPLAY": "wayland-0", "DISPLAY": ":0"}, true},
-		{"wayland session with xwayland", map[string]string{"XDG_SESSION_TYPE": "wayland", "DISPLAY": ":0"}, true},
-		{"wayland without x server", map[string]string{"WAYLAND_DISPLAY": "wayland-0"}, false},
-		{"x11", map[string]string{"XDG_SESSION_TYPE": "x11", "DISPLAY": ":0"}, false},
-		{"explicit backend", map[string]string{"WAYLAND_DISPLAY": "wayland-0", "DISPLAY": ":0", "GDK_BACKEND": "wayland"}, false},
-		{"forced native", map[string]string{"WAYLAND_DISPLAY": "wayland-0", "DISPLAY": ":0", "SWITCHER_TRAY_MENU": "native"}, false},
-	}
-	for _, c := range cases {
-		if got := preferXWayland(env(c.values)); got != c.want {
-			t.Fatalf("%s: prefer = %v, want %v", c.name, got, c.want)
-		}
+}
+
+// The native window is the external boundary: this double models GTK4 ignoring
+// movement until its surface is realized, without starting a desktop app.
+type unrealizedTrayWindow struct {
+	shown, focused bool
+	x, y           int
+}
+
+func (w *unrealizedTrayWindow) Show() application.Window {
+	w.shown = true
+	return nil
+}
+
+func (w *unrealizedTrayWindow) Focus() { w.focused = w.shown && w.x == 1680 && w.y == 40 }
+
+func (w *unrealizedTrayWindow) SetPosition(x, y int) {
+	if w.shown {
+		w.x, w.y = x, y
 	}
 }
 

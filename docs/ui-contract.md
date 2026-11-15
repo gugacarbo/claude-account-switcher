@@ -107,8 +107,10 @@ por `@/components/ui/<nome>`; `cn` vem de `@/lib/utils`. Componentes
 adicionados espelham o que as telas usam: `button`, `card`, `progress`,
 `checkbox`, `slider`, `input`, `label`, `badge`, `avatar`, `separator`,
 `alert`. As telas (`App`, `WindowHeader`, accounts, settings, threshold,
-resume, tray) já consomem esses primitives; a aparência continua vindo das
-classes unlayered do app, que vencem as utilities do kit (E7 da epic).
+resume) já consomem esses primitives; a aparência continua vindo das
+classes unlayered do app, que vencem as utilities do kit (E7 da epic). O
+dropdown do tray usa o design de troca rápida de perfil (botões nativos,
+navegação por teclado) e ainda não foi migrado para o kit.
 
 Regras de integração (todas verificadas por gate ou teste irmão):
 
