@@ -92,7 +92,7 @@ export function makeUiState(overrides: Partial<UIState> = {}): UIState {
   };
 }
 
-export interface FakeBridgeOptions {
+interface FakeBridgeOptions {
   /** UI state returned by state(); defaults to makeUiState(). */
   state?: UIState;
   /** When set, state() rejects with this message (error banner story). */

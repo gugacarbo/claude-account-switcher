@@ -25,6 +25,25 @@ describe("WindowHeader", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("renders the header controls as shadcn buttons", () => {
+    render(
+      <WindowHeader
+        title="Accounts"
+        t={(en) => en}
+        onClose={() => {}}
+        onBack={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /close/i })).toHaveAttribute(
+      "data-slot",
+      "button",
+    );
+    expect(screen.getByRole("button", { name: /back/i })).toHaveAttribute(
+      "data-slot",
+      "button",
+    );
+  });
+
   it("shows the back control only when onBack is provided", () => {
     const onBack = vi.fn();
     const { rerender } = render(

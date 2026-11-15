@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import type { Prompt } from "../../bridge";
+import { Alert } from "../../components/ui/alert";
+import { Button } from "../../components/ui/button";
+import { Checkbox } from "../../components/ui/checkbox";
+import { Label } from "../../components/ui/label";
 import type { T } from "../../shared/i18n";
 export function Resume({
   prompt: p,
@@ -20,12 +24,12 @@ export function Resume({
   }, []);
   if (!p)
     return (
-      <p className="notice">
+      <Alert className="notice" role="none">
         {t(
           "No conversations are waiting for an answer.",
           "没有等待确认的对话。",
         )}
-      </p>
+      </Alert>
     );
   const seconds = Math.max(0, Math.ceil((Date.parse(p.deadline) - now) / 1000));
   async function answer(values: boolean[]) {
@@ -42,16 +46,15 @@ export function Resume({
       </p>
       <section className="chat-list">
         {p.chats.map((c, i) => (
-          <label className="chat" key={`${c.folder}:${c.title}`}>
-            <input
-              type="checkbox"
+          <Label className="chat" key={`${c.folder}:${c.title}`}>
+            <Checkbox
               checked={keep[i]}
               disabled={disabled}
-              onChange={async (e) => {
-                const checked = e.target.checked;
+              onCheckedChange={async (checked) => {
+                const isChecked = checked === true;
                 if (p.paused || (await act("PauseResume", p.id))) {
                   setKeep((values) =>
-                    values.map((v, j) => (j === i ? checked : v)),
+                    values.map((v, j) => (j === i ? isChecked : v)),
                   );
                 }
               }}
@@ -60,7 +63,7 @@ export function Resume({
               <strong>{c.title}</strong>
               <small>{c.folder}</small>
             </span>
-          </label>
+          </Label>
         ))}
       </section>
       <p className="fine-print" role="status">
@@ -72,22 +75,24 @@ export function Resume({
             )}
       </p>
       <div className="actions">
-        <button
+        <Button
           type="button"
+          variant="ghost"
           className="secondary"
           disabled={disabled || (!p.paused && seconds === 0)}
           onClick={() => answer(p.chats.map(() => false))}
         >
           {t("Don’t continue", "不继续")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
           className="primary"
           disabled={disabled || (!p.paused && seconds === 0)}
           onClick={() => answer(keep)}
         >
           {t("Continue selected", "继续选中的对话")}
-        </button>
+        </Button>
       </div>
     </>
   );

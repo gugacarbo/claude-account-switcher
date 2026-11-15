@@ -1,4 +1,7 @@
 import type { UIState } from "../../bridge";
+import { Button } from "../../components/ui/button";
+import { Checkbox } from "../../components/ui/checkbox";
+import { Label } from "../../components/ui/label";
 import type { T } from "../../shared/i18n";
 export function Settings({
   state: s,
@@ -53,23 +56,25 @@ export function Settings({
       </p>
       <section className="settings-card">
         {options.map(([key, en, zh, desc, descZH]) => (
-          <label className="setting" key={key}>
+          <Label className="setting" key={key}>
             <span>
               <strong>{t(en, zh)}</strong>
               <small>{t(desc, descZH)}</small>
             </span>
-            <input
-              type="checkbox"
+            <Checkbox
               aria-label={t(en, zh)}
               checked={Boolean(s[key])}
               disabled={disabled}
-              onChange={(e) => act("SetOption", key, e.target.checked)}
+              onCheckedChange={(checked) =>
+                act("SetOption", key, checked === true)
+              }
             />
-          </label>
+          </Label>
         ))}
       </section>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         className="threshold-link"
         onClick={() =>
           onOpenThreshold
@@ -82,7 +87,7 @@ export function Settings({
           <small>{t("5-hour or weekly usage", "5 小时或每周用量")}</small>
         </span>
         <strong>{s.threshold}% →</strong>
-      </button>
+      </Button>
       <p className="fine-print">
         {t(
           "Closing this window keeps monitoring and automations running. Use Quit in the account panel to stop the app.",

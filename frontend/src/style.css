@@ -428,9 +428,8 @@ h1 {
   color: var(--muted);
   margin-left: 1px;
 }
-progress {
+.meter [data-slot="progress"] {
   display: block;
-  appearance: none;
   width: 100%;
   height: 5px;
   border: 0;
@@ -439,20 +438,14 @@ progress {
   margin: 6px 0;
   background: var(--line);
 }
-progress::-webkit-progress-bar {
-  background: var(--line);
-}
-progress::-webkit-progress-value {
+.meter [data-slot="progress-indicator"] {
   background: var(--green);
   border-radius: 10px;
 }
-progress::-moz-progress-bar {
-  background: var(--green);
-}
-progress.warn::-webkit-progress-value {
+.meter [data-slot="progress"].warn [data-slot="progress-indicator"] {
   background: #b77b29;
 }
-progress.full::-webkit-progress-value {
+.meter [data-slot="progress"].full [data-slot="progress-indicator"] {
   background: #cb5143;
 }
 .reset {
@@ -638,12 +631,23 @@ footer {
   color: var(--muted);
   margin-top: 5px;
 }
-.setting input {
+.setting [data-slot="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--bg);
   cursor: pointer;
   flex: none;
+}
+.setting [data-slot="checkbox"][data-state="checked"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.setting [data-slot="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .threshold-link {
   display: flex;
@@ -703,10 +707,26 @@ footer {
   font-size: 25px;
   color: var(--muted);
 }
-input[type="range"] {
+.threshold-card [data-slot="slider"] {
   width: 100%;
+  height: 16px;
   margin: 22px 0 15px;
-  accent-color: var(--accent);
+}
+.threshold-card [data-slot="slider-track"] {
+  height: 4px;
+  background: var(--line);
+}
+.threshold-card [data-slot="slider-range"] {
+  background: var(--accent);
+}
+.threshold-card [data-slot="slider-thumb"] {
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+}
+.threshold-card [data-slot="slider-thumb"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .presets {
   display: flex;
@@ -762,8 +782,23 @@ input[type="range"] {
   border-radius: 10px;
   background: var(--card);
 }
-.chat input {
-  accent-color: var(--accent);
+.chat [data-slot="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--bg);
+  cursor: pointer;
+  flex: none;
+}
+.chat [data-slot="checkbox"][data-state="checked"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.chat [data-slot="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .chat span {
   min-width: 0;

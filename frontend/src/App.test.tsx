@@ -129,9 +129,9 @@ describe("shared desktop UI", () => {
     vi.mocked(api.call).mockRejectedValue(new Error("Operation failed"));
     render(<App bridge={api} view="panel" />);
     fireEvent.click(await screen.findByRole("button", { name: "Add account" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Operation failed",
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Operation failed");
+    expect(alert).toHaveAttribute("data-slot", "alert");
   });
   it("navigates to settings and threshold inside the unified panel without window calls", async () => {
     const api = bridge();

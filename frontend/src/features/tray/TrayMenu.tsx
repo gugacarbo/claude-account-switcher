@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Account, Bridge, UIState } from "../../bridge";
+import { Button } from "../../components/ui/button";
+import { Separator } from "../../components/ui/separator";
 import type { T } from "../../shared/i18n";
 
 // The tray dropdown is its own frameless window (?view=menu), so it keeps the
@@ -47,9 +49,10 @@ export function TrayMenu({
       <div className="tray-menu-accounts">
         {accounts.length ? (
           accounts.map((a) => (
-            <button
+            <Button
               key={a.id}
               type="button"
+              variant="ghost"
               role="menuitemradio"
               aria-checked={a.active}
               className={`tray-menu-account ${a.active ? "active" : ""}`}
@@ -70,7 +73,7 @@ export function TrayMenu({
                   ●
                 </span>
               ) : null}
-            </button>
+            </Button>
           ))
         ) : (
           <p className="tray-menu-empty">
@@ -78,24 +81,26 @@ export function TrayMenu({
           </p>
         )}
       </div>
-      <hr className="tray-menu-separator" />
-      <button
+      <Separator className="tray-menu-separator" />
+      <Button
         ref={first}
         type="button"
+        variant="ghost"
         role="menuitem"
         className="tray-menu-item"
         onClick={() => void run("OpenWindow", "panel")}
       >
         {t("Open", "打开")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="ghost"
         role="menuitem"
         className="tray-menu-item"
         onClick={() => void run("Quit")}
       >
         {t("Quit", "退出")}
-      </button>
+      </Button>
     </div>
   );
 }

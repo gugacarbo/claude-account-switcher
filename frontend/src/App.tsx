@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Bridge, UIState } from "./bridge";
+import { Alert } from "./components/ui/alert";
+import { Button } from "./components/ui/button";
 import { SettingsIcon } from "./shared/Icons";
 import { WindowHeader } from "./shared/WindowHeader";
 import "./style.css";
@@ -119,8 +121,9 @@ export function App({
         onBack={unified && active !== "panel" ? goBack : undefined}
       >
         {active === "panel" ? (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className="window-header-button"
             aria-label={t("Settings", "设置")}
             onClick={() =>
@@ -128,14 +131,15 @@ export function App({
             }
           >
             <SettingsIcon />
-          </button>
+          </Button>
         ) : null}
       </WindowHeader>
       {error ? (
-        <div className="notice error" role="alert">
+        <Alert className="notice error">
           {error}
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() =>
               bridge
                 .state()
@@ -144,8 +148,8 @@ export function App({
             }
           >
             {t("Retry", "重试")}
-          </button>
-        </div>
+          </Button>
+        </Alert>
       ) : null}
       {!state ? (
         <p role="status" className="loading">
@@ -192,19 +196,21 @@ export function App({
                 </span>
               </div>
               {state.status ? (
-                <p className="notice" role="status">
+                <Alert className="notice" role="status">
                   {state.status}
-                </p>
+                </Alert>
               ) : state.note ? (
-                <p className="notice">{state.note}</p>
+                <Alert className="notice" role="none">
+                  {state.note}
+                </Alert>
               ) : null}
               {state.busy ? (
-                <p className="notice" role="status">
+                <Alert className="notice" role="status">
                   {t(
                     "Working on it. Your sign-ins are kept safe.",
                     "正在处理，登录信息会安全保留。",
                   )}
-                </p>
+                </Alert>
               ) : null}
               <section className="accounts" aria-label={t("Accounts", "账号")}>
                 {state.accounts.length ? (
@@ -233,15 +239,16 @@ export function App({
                   </div>
                 )}
               </section>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 className="add-button"
                 aria-label={t("Add account", "添加账号")}
                 disabled={disabled}
                 onClick={() => act("AddAccount")}
               >
                 ＋ {t("Add account", "添加账号")}
-              </button>
+              </Button>
               <div className="automation">
                 <span
                   className={`status-dot ${state.autoSwitch ? "on" : ""}`}
@@ -264,8 +271,9 @@ export function App({
                         )}
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   className="text-button"
                   onClick={() =>
                     unified
@@ -274,11 +282,12 @@ export function App({
                   }
                 >
                   {t("Manage", "管理")}
-                </button>
+                </Button>
               </div>
               {state.update ? (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   className="update-button"
                   disabled={disabled}
                   onClick={() => act("InstallUpdate")}
@@ -287,33 +296,36 @@ export function App({
                     `Version ${state.update} is ready. Update & restart →`,
                     `版本 ${state.update} 已就绪。更新并重启 →`,
                   )}
-                </button>
+                </Button>
               ) : null}
               <footer>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   className="text-button"
                   disabled={disabled}
                   onClick={() => act("ImportChats")}
                 >
                   {t("Import chats", "导入聊天")}
-                </button>
+                </Button>
                 <span className="footer-end">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     className="text-button"
                     onClick={() => act("OpenDataFolder")}
                   >
                     {t("Data folder", "数据文件夹")}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
                     className="text-button"
                     disabled={disabled}
                     onClick={() => act("Quit")}
                   >
                     {t("Quit", "退出")}
-                  </button>
+                  </Button>
                 </span>
               </footer>
             </>
