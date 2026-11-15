@@ -1,3 +1,17 @@
+/* Tailwind v4 sem preflight: o app tem reset próprio e a matriz visual
+   versionada (frontend/visual) não pode mudar por adoção de ferramenta.
+   Theme + utilities alimentam os componentes shadcn/ui em src/components/ui;
+   as regras globais do app vivem em @layer base para que as utilities
+   vençam nos componentes shadcn sem alterar as telas atuais. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Tema segue o SO (docs/ui-contract.md): nada de classe .dark fixa. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
 @font-face {
   font-family: "Nunito Sans";
   src: url("./assets/fonts/NunitoSans.ttf") format("truetype-variations");
@@ -23,6 +37,26 @@
   --green: #46724f;
   --shadow: 0 2px 8px #3e342007;
   color-scheme: light dark;
+  /* Tokens semânticos do shadcn/ui derivados dos tokens do app.
+     --card, --muted e --accent mantêm o significado original do app;
+     o @theme inline no fim do arquivo mapeia as utilities shadcn
+     (bg-muted, bg-accent…) para as superfícies corretas. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card-foreground: var(--text);
+  --popover: var(--card);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--bg);
+  --secondary: var(--accent-soft);
+  --secondary-foreground: var(--text);
+  --muted-foreground: var(--muted);
+  --accent-foreground: var(--accent);
+  --destructive: #cb5143;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--accent);
+  --radius: 0.625rem;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -37,38 +71,47 @@
     --accent-soft: #443129;
     --green: #a5c89a;
     --shadow: none;
+    /* Único token shadcn com valor próprio no escuro; os demais fluem
+       dos tokens do app acima via var(). */
+    --destructive: #e0857a;
   }
 }
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-}
-button,
-input {
-  font: inherit;
-}
-button {
-  cursor: pointer;
-  color: inherit;
-}
-button:disabled {
-  opacity: 0.45;
-  cursor: wait;
-}
-button:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-}
-button {
-  transition:
-    background-color 0.13s,
-    border-color 0.13s;
-}
-button:hover:not(:disabled) {
-  filter: brightness(0.95);
+/* Defaults globais do app em @layer base: continuam vencendo o UA para as
+   telas atuais (sem utilities), mas perdem para as utilities Tailwind nos
+   componentes shadcn/ui — ex.: text-primary-foreground, disabled:opacity-50
+   e o anel de foco próprio deles. */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+  }
+  button,
+  input {
+    font: inherit;
+  }
+  button {
+    cursor: pointer;
+    color: inherit;
+  }
+  button:disabled {
+    opacity: 0.45;
+    cursor: wait;
+  }
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+  button {
+    transition:
+      background-color 0.13s,
+      border-color 0.13s;
+  }
+  button:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
 }
 .app {
   max-width: 600px;
@@ -171,23 +214,46 @@ h1 {
 }
 /* Tray dropdown: its own frameless window, so it keeps the app surface
    instead of the host menu implementation. */
+/* Row heights are fixed: menuHeight in internal/app/desktop_runtime.go sizes
+   the window from them, so change both together. */
 .tray-menu {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  height: 100vh;
   padding: 8px;
-  min-height: 100vh;
   background: var(--card);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 12px;
+  overflow: hidden;
 }
 
+.tray-menu-heading {
+  flex: none;
+  height: 28px;
+  margin: 0;
+  padding: 6px 10px 0;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.tray-menu-accounts {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.tray-menu-account,
 .tray-menu-item {
   --wails-draggable: no-drag;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 0 10px;
   text-align: left;
   font-size: 13px;
   border: 0;
@@ -196,12 +262,75 @@ h1 {
   color: inherit;
 }
 
+.tray-menu-account {
+  height: 52px;
+}
+
+.tray-menu-item {
+  flex: none;
+  height: 36px;
+}
+
+.tray-menu-account:hover:not(:disabled),
+.tray-menu-account:focus-visible,
 .tray-menu-item:hover:not(:disabled),
 .tray-menu-item:focus-visible {
   background: var(--accent-soft);
 }
 
+.tray-menu-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tray-menu-identity {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tray-menu-identity strong,
+.tray-menu-identity small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tray-menu-identity strong {
+  font-weight: 600;
+}
+
+.tray-menu-identity small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tray-menu-check {
+  flex: none;
+  font-size: 10px;
+  color: var(--green);
+}
+
+.tray-menu-empty {
+  height: 36px;
+  margin: 0;
+  padding: 9px 10px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .tray-menu-separator {
+  flex: none;
+  height: 0;
   border: 0;
   border-top: 1px solid var(--line);
   margin: 4px 6px;
@@ -671,5 +800,51 @@ input[type="range"] {
   * {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* Mapeamento das utilities shadcn/ui para os tokens do app.
+   Atenção às colisões de nome: no app --muted é texto secundário e
+   --accent é o terracota da marca; no shadcn são superfícies. Por isso
+   bg-muted → --line e bg-accent → --accent-soft, preservando os dois
+   contratos. Fonte segue a marca (Nunito Sans), não a Geist do preset. */
+@theme inline {
+  --font-sans:
+    "Nunito Sans", "Segoe UI Variable Text", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--line);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }

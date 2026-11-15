@@ -22,10 +22,6 @@
       "reason": "legacy component exercised via App.test.tsx and screens.stories.tsx; dedicated scenario pending E2 fixtures"
     },
     {
-      "file": "frontend/src/features/tray/TrayMenu.tsx",
-      "reason": "tray surface rendered by the native layer; scenario pending E2 fixtures and desktop validation (E8)"
-    },
-    {
       "file": "frontend/src/shared/Icons.tsx",
       "reason": "stateless icon components with no behavior; covered visually by existing stories"
     },

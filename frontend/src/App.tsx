@@ -77,9 +77,9 @@ export function App({
     return off;
   }, [bridge, unified]);
   // The tray dropdown is its own small window, not a panel section: it needs no
-  // header and no shared state beyond the language.
+  // header, only the accounts and the language.
   if (view === "menu") {
-    return <TrayMenu bridge={bridge} lang={state?.lang ?? "en"} />;
+    return <TrayMenu bridge={bridge} state={state} />;
   }
   const t: T = (en, zh) => (state?.lang === "zh-CN" ? zh : en);
   async function act(method: string, ...args: unknown[]) {

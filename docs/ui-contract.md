@@ -50,7 +50,8 @@ regras de julgamento (reuso, densidade, acessibilidade) ficam para revisão.
 - Temas: claro e escuro (prefers-color-scheme); nenhum tema fixo no app.
 - Dimensões extraídas de `internal/app/desktop_runtime.go`:
   - Telas: 420×640 inicial, mínimo 360×360.
-  - Dropdown de tray: mínimo 180×96.
+  - Dropdown de tray: 300 de largura, altura calculada pelo número de contas
+    (`menuHeight`, até 6 linhas antes de rolar), mínimo 180×96.
 - A matriz visual global do Playwright é 520×720, en-US, claro
   (`frontend/playwright.config.ts`); stories pontuais escuras/estreitas são
   complemento, não matriz completa.
@@ -92,11 +93,47 @@ comprovada (≥2 ocorrências reais).
 | `Resume` | `frontend/src/features/resume/Resume.tsx` | Tela de retomada de chats | `ResumeChats`, `NoResume` |
 | `Settings` | `frontend/src/features/settings/Settings.tsx` | Tela de preferências | `Preferences`, `BusyPreferences` |
 | `Threshold` | `frontend/src/features/settings/Threshold.tsx` | Controle de threshold dentro de `Settings` | `SwitchThreshold` |
-| `TrayMenu` | `frontend/src/features/tray/TrayMenu.tsx` | Menu do tray (render nativo) | — |
+| `TrayMenu` | `frontend/src/features/tray/TrayMenu.tsx` | Dropdown do tray: resumo das contas, troca com um clique, Abrir/Sair | — |
 
 Storybook: `frontend/src/screens.stories.tsx`. Componentes de feature não são
 importados entre features (gate `check:architecture`); reuso acontece via
 `App.tsx` ou extração para `shared/`.
+
+## shadcn/ui (kit de primitives)
+
+Instalado via CLI (`components.json` em `frontend/`, estilo `radix-nova`,
+biblioteca Radix). Primitives em `frontend/src/components/ui/`, importáveis
+por `@/components/ui/<nome>`; `cn` vem de `@/lib/utils`. Componentes
+adicionados espelham o que as telas já usam: `button`, `card`, `progress`,
+`checkbox`, `slider`, `input`, `label`, `badge`, `avatar`, `separator`,
+`alert`. Eles ainda **não** substituem as classes das telas atuais — a
+migração de cada tela é decisão de revisão com evidência visual (E7 da epic).
+
+Regras de integração (todas verificadas por gate ou teste irmão):
+
+- Tailwind v4 entra **sem preflight** (`@layer theme, base, …` +
+  `tailwindcss/theme.css` + `tailwindcss/utilities.css` em `style.css`): o
+  reset do app e a matriz visual versionada não mudam. Os defaults globais
+  do app (`button`, `input`, foco) vivem em `@layer base` para que as
+  utilities vençam nos componentes shadcn sem afetar as telas atuais.
+- Tema escuro segue `prefers-color-scheme` (`@custom-variant dark` por
+  media query); não existe classe `.dark`.
+- Tokens semânticos do shadcn (`--background`, `--primary`, `--border`,
+  `--ring`, `--destructive`…) são derivados dos tokens do app em
+  `style.css`. Colisões de nome preservam o significado do app: `--muted`
+  continua sendo texto secundário e `--accent` o terracota da marca; as
+  utilities de superfície mapeiam `bg-muted → --line` e
+  `bg-accent → --accent-soft` no `@theme inline`.
+- Cada componente de `components/ui` tem teste irmão (regra de cobertura
+  abaixo vale igual para o kit) e nenhum hex literal fora de `style.css`.
+- Desvios deliberados do registry, mantidos em reinstall: `Progress`
+  repassa `value` ao Root (aria-valuenow), o thumb do `Slider` usa
+  `bg-card` em vez de `bg-white`, e o import de `cn` passa por
+  `@/lib/utils`.
+
+Para adicionar um componente: `bunx --bun shadcn@latest add <nome>` em
+`frontend/`, criar o teste irmão, revisar tokens/classes geradas contra
+este contrato e rodar `bun run validate` + `bun run test:visual`.
 
 ## Gates objetivos
 
