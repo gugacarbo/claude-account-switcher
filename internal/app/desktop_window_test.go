@@ -77,6 +77,16 @@ func TestTrayMenuWindowBehavesLikeADropdown(t *testing.T) {
 	if opts.URL != "/?view=menu" {
 		t.Fatalf("tray menu url is %q", opts.URL)
 	}
+	// The GNOME extension finds the dropdown by its title suffix to move it
+	// under the icon, so the title must not collide with the other windows.
+	if opts.Title != appName()+menuTitleSuffix {
+		t.Fatalf("tray menu title is %q, want %q", opts.Title, appName()+menuTitleSuffix)
+	}
+	for _, other := range []string{"panel", "resume"} {
+		if windowOptions(other).Title == opts.Title {
+			t.Fatalf("%s window shares the tray menu title %q", other, opts.Title)
+		}
+	}
 }
 
 func TestResumeWindowStaysFramelessPrompt(t *testing.T) {
@@ -92,32 +102,28 @@ func TestResumeWindowStaysFramelessPrompt(t *testing.T) {
 	}
 }
 
-// Wayland cannot place a client window, so the dropdown must come from the
-// desktop there; other targets keep the React popover.
-func TestUsesNativeTrayMenuFollowsSession(t *testing.T) {
+// The React dropdown is the tray menu for every session; the host menu is an
+// explicit fallback only, because it lists Open and Quit but no accounts.
+func TestUsesNativeTrayMenuIsExplicitFallback(t *testing.T) {
 	env := func(values map[string]string) func(string) string {
 		return func(key string) string { return values[key] }
-	}
-	if runtime.GOOS != "linux" {
-		if usesNativeTrayMenu(env(nil)) {
-			t.Fatal("non-linux hosts must keep the React dropdown")
-		}
-		return
 	}
 	cases := []struct {
 		name   string
 		values map[string]string
 		want   bool
 	}{
-		{"wayland", map[string]string{"WAYLAND_DISPLAY": "wayland-0"}, true},
-		{"wayland session", map[string]string{"XDG_SESSION_TYPE": "wayland"}, true},
+		{"wayland", map[string]string{"WAYLAND_DISPLAY": "wayland-0"}, false},
+		{"wayland session", map[string]string{"XDG_SESSION_TYPE": "wayland"}, false},
 		{"x11", map[string]string{"XDG_SESSION_TYPE": "x11", "DISPLAY": ":0"}, false},
 		{"forced native", map[string]string{"SWITCHER_TRAY_MENU": "native"}, true},
 		{"forced react", map[string]string{"SWITCHER_TRAY_MENU": "react", "WAYLAND_DISPLAY": "wayland-0"}, false},
 	}
 	for _, c := range cases {
-		if got := usesNativeTrayMenu(env(c.values)); got != c.want {
-			t.Fatalf("%s: native = %v, want %v", c.name, got, c.want)
+		// The host menu is only wired on Linux; other hosts always keep React.
+		want := c.want && runtime.GOOS == "linux"
+		if got := usesNativeTrayMenu(env(c.values)); got != want {
+			t.Fatalf("%s: native = %v, want %v", c.name, got, want)
 		}
 	}
 }

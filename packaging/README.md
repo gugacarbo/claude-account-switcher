@@ -18,14 +18,28 @@ To publish a release:
 
 On GNOME the AppIndicator extension only forwards a double click to the app and
 keeps single clicks for its own menu. `gnome-shell/claude-account-switcher@snlperstripes.github.com`
-makes a single left or right click on the tray icon open the React dropdown,
-anchored under the icon. It finds the icon by its StatusNotifierItem Id (the
-app name) and leaves every other icon alone.
+makes a single left or right click on the tray icon open the React dropdown. It
+finds the icon by its StatusNotifierItem Id (the app name) and leaves every
+other icon alone.
+
+It also places the dropdown. A Wayland compositor ignores the position a client
+asks for, so the app cannot anchor its own window; the extension runs inside the
+compositor and moves it under the icon. To find that window it uses the client
+pid from the indicator's bus name (`org.kde.StatusNotifierItem-<pid>-<n>`) and
+takes the app's smallest mapped window: the panel (420x640) and the resume
+prompt (480x540) are larger than the dropdown (320x440). Window titles would be
+exact, but Wails 3.1.0 skips `gtk_window_set_title` for frameless windows, so
+every window of the app has the same title; `menuTitleSuffix` is kept for the
+day that changes. What the extension did is written to
+`/tmp/claude-switcher-tray.log`, because a failed match is otherwise silent and
+`log()` does not reach `journalctl` on every host.
 
 ```bash
 make install-gnome-extension
 ```
 
-On Wayland the Shell only discovers a new extension after logging out and back
-in; then run `gnome-extensions enable claude-account-switcher@snlperstripes.github.com`
-if it is not enabled yet.
+The Shell imports an extension only when it starts, so **log out and back in**
+after installing or changing it — `gnome-extensions disable/enable` does not
+reload the code. Then run
+`gnome-extensions enable claude-account-switcher@snlperstripes.github.com` if it
+is not enabled yet.

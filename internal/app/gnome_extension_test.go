@@ -8,7 +8,8 @@ import (
 )
 
 // The GNOME Shell extension finds the tray icon by its StatusNotifierItem Id,
-// which is appName() in the UI language the app started with.
+// which is appName() in the UI language the app started with, and moves the
+// dropdown once it knows the window title suffix.
 func TestGnomeExtensionKnowsEveryTrayID(t *testing.T) {
 	src, err := os.ReadFile("../../packaging/gnome-shell/claude-account-switcher@snlperstripes.github.com/tray.js")
 	if err != nil {
@@ -21,5 +22,8 @@ func TestGnomeExtensionKnowsEveryTrayID(t *testing.T) {
 		if id := strconv.Quote(appName()); !strings.Contains(string(src), id) {
 			t.Fatalf("tray.js TRAY_IDS is missing %s", id)
 		}
+	}
+	if want := "MENU_TITLE_SUFFIX = " + strconv.Quote(menuTitleSuffix); !strings.Contains(string(src), want) {
+		t.Fatalf("tray.js must declare %s", want)
 	}
 }

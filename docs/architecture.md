@@ -17,8 +17,10 @@ This repository uses a lightweight Bun workspace and one Go module.
   frameless and starts hidden. The panel and the tray menu hide as soon as they
   lose focus, so a click outside closes them instead of leaving them behind
   other apps. The tray icon opens the React dropdown (`frontend/src/features/tray`),
-  not a host menu: `SystemTray.SetMenu` is never called, and the dropdown reaches
-  the desktop through the existing `OpenWindow`/`Quit` commands.
+  the only tray menu that lists accounts with usage and switches them; a
+  host-drawn menu is built solely for the explicit `SWITCHER_TRAY_MENU=native`
+  fallback. The dropdown reaches the desktop through the existing
+  `OpenWindow`/`Quit` commands.
 - `frontend/src/shared/WindowHeader.tsx` is the single title bar for every
   screen: drag region with the `--wails-draggable: drag` inline token, an
   optional back control on nested screens, and a close control that always

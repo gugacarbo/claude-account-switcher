@@ -34,6 +34,10 @@ selection/cancel/timeout/stale-answer behavior, asset serving and stable binding
 
 - Tray icon interaction, positioning/fallback, blur/Escape and auxiliary window
   lifecycle on actual Windows/macOS and Linux X11/Wayland desktops.
+- Single and right click opening the React dropdown through the packaged GNOME
+  extension: the extension is installed and enabled in the session, but the
+  shell only scans it at login, so the click path stays unverified until the
+  next session restart.
 - End-to-end account switching, SSH import, real autostart and self-update on
   disposable accounts on each OS. No real credentials were switched for tests.
 - Visual dark-mode, Chinese and keyboard/accessibility acceptance across native

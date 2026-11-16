@@ -9,6 +9,13 @@ import (
 
 func appName() string { return tr("Claude Account Switcher", "Claude 账号切换器") }
 
+// menuTitleSuffix marks the tray dropdown's window title. The packaged GNOME
+// extension moves that window under the icon, because a Wayland compositor
+// ignores the position the app asks for, and this suffix is how the shell tells
+// the dropdown apart from the panel and the resume prompt, which share the app
+// name. tray.js carries the same constant; a test keeps the two in sync.
+const menuTitleSuffix = " menu"
+
 // menuTab right-aligns the usage on Windows, where a tab in a menu title
 // starts a right-aligned column.
 var menuTab = map[bool]string{true: "\t", false: "    "}[runtime.GOOS == "windows"]

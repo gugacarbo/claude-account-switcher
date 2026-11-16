@@ -38,6 +38,7 @@ func windowOptions(name string) application.WebviewWindowOptions {
 		opts.HideOnFocusLost = true
 		opts.HideOnEscape = true
 	case "menu":
+		opts.Title = appName() + menuTitleSuffix
 		opts.Width, opts.Height = 320, 440
 		opts.MinWidth, opts.MinHeight = 280, 240
 		opts.AlwaysOnTop = true
@@ -51,10 +52,13 @@ func windowOptions(name string) application.WebviewWindowOptions {
 }
 
 // usesNativeTrayMenu reports whether the tray dropdown has to be drawn by the
-// desktop instead of React. Wayland compositors refuse to place a client window,
-// so a React popover cannot be anchored to the icon there; X11, Windows and
-// macOS honour the position and keep the React dropdown. SWITCHER_TRAY_MENU
-// forces a mode ("native" or "react") when validating on a specific desktop.
+// desktop instead of React. The React dropdown is the tray menu everywhere: it
+// is the only one that lists accounts with usage and can switch them. Wayland
+// compositors refuse to place a client window, so there the dropdown opens
+// wherever the compositor decides instead of under the icon; a host-drawn menu
+// (Open + Quit only) stays available as an explicit fallback through
+// SWITCHER_TRAY_MENU=native. "react" forces the dropdown back when the fallback
+// is exported in a session profile.
 func usesNativeTrayMenu(getenv func(string) string) bool {
 	if runtime.GOOS != "linux" {
 		return false
@@ -65,7 +69,7 @@ func usesNativeTrayMenu(getenv func(string) string) bool {
 	case "react":
 		return false
 	}
-	return getenv("WAYLAND_DISPLAY") != "" || getenv("XDG_SESSION_TYPE") == "wayland"
+	return false
 }
 
 type trayMenuWindow interface {
@@ -92,6 +96,14 @@ func runDesktop(s *switcher, lock net.Listener) {
 	app := application.New(application.Options{Name: appName(), Description: "Independent account switching utility", Services: []application.Service{application.NewService(service)}, Assets: application.AssetOptions{Handler: application.BundledAssetFileServer(assets)}, Mac: application.MacOptions{ActivationPolicy: application.ActivationPolicyAccessory}})
 	tray := app.SystemTray.New()
 	tray.SetIcon(trayIcon(-1, defaultThreshold))
+	// The Linux tray publishes its StatusNotifierItem Id from the label, and the
+	// packaged GNOME extension finds our icon by that Id to turn a single click
+	// into Activate. Wails defaults the label to "Wails", so it must be set
+	// before Run creates the platform tray. Other hosts show the label next to
+	// the icon, which is why it stays Linux-only.
+	if runtime.GOOS == "linux" {
+		tray.SetLabel(appName())
+	}
 	tray.SetTooltip(appName())
 	windows := map[string]*application.WebviewWindow{}
 	for _, name := range desktopWindowNames() {
@@ -134,8 +146,9 @@ func runDesktop(s *switcher, lock net.Listener) {
 			}
 		})
 	}
-	// Wayland refuses to place a client window, so the dropdown falls back to the
-	// host menu there; elsewhere the React popover is anchored to the work area.
+	// The React dropdown is the default tray menu; the host menu is only the
+	// explicit SWITCHER_TRAY_MENU=native fallback. On Wayland the compositor
+	// ignores the anchor and places the dropdown itself.
 	if usesNativeTrayMenu(os.Getenv) {
 		menu := app.NewMenu()
 		updateTrayMenu(menu, service, showPanel)

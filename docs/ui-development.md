@@ -14,10 +14,17 @@ JavaScript. Fixed command IDs in `ui_bindings.go` / `frontend/src/bridge.ts` for
 the small bridge surface. Do not bind switcher or filesystem helpers directly.
 
 `internal/app/desktop_runtime.go` manages one background app, tray, quick panel and reusable
-settings/threshold/resume windows. The native tray menu also lists accounts by
-email with an active marker and compact 5-hour/weekly usage percentages. Other
-accounts can be switched directly; switching is disabled during an operation or
-update. Menu rows refresh with backend state, alongside Open and Quit.
+settings/threshold/resume windows. The tray icon opens the React dropdown, which
+lists accounts by email with an active marker and compact 5-hour/weekly usage
+percentages; other accounts can be switched directly and switching is disabled
+during an operation or update. Rows refresh with backend state, alongside Open
+and Quit. A host-drawn menu (Open and Quit only, no account rows) is built only
+when `SWITCHER_TRAY_MENU=native` is exported. On GNOME/Ubuntu the AppIndicator
+host sends `Activate` on a double click, so the dropdown needs the packaged
+GNOME extension (`make install-gnome-extension`) to open on a single or right
+click. That extension finds the icon by its StatusNotifierItem Id, which Wails
+fills from the tray label: the app sets `SetLabel(appName())` on Linux before
+`Run`, otherwise the Id stays "Wails" and the extension never matches.
 The frontend is embedded from `frontend/dist`; build it before Go compilation.
 `background.go` retains existing polling, automatic switches, update checks and
 SSH scheduling. Resume deadlines live in Go, not in a throttled browser timer.
@@ -42,9 +49,12 @@ Bridge to the actual App component; production has no sample-account mode.
 The purego build loads GTK4/WebKitGTK6 on Linux, Cocoa/WebKit on macOS and
 WebView2 on Windows. Linux minimum: Ubuntu 24.04 / Debian 13. Install
 `libgtk-4-1 libwebkitgtk-6.0-4`. An AppIndicator/StatusNotifier host is required;
-on GNOME an appropriate tray extension may be necessary. Window anchoring is
-best-effort; `PositionWindow` errors fall back to a centered compact panel.
-Wayland compositors ultimately control placement.
+on GNOME the packaged extension supplies the single-click `Activate` and moves
+the dropdown under the icon. Window anchoring is best-effort: `PositionWindow`
+errors fall back to a centered compact panel, and on Wayland the compositor
+ignores it for client windows, so the extension (which runs inside the
+compositor) is what anchors the dropdown. The Shell imports extension code only
+at startup: install or change it, then log out and back in.
 
 Headless tests: `go test -tags headless ./...`. A headless executable is only for
 CLI/core work; it is not a substitute release artifact. No frontend assets or GUI
