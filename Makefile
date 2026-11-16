@@ -1,4 +1,4 @@
-.PHONY: frontend check build dev
+.PHONY: frontend check build dev gnome-extension install-gnome-extension
 
 frontend:
 	bun install --frozen-lockfile
@@ -14,3 +14,14 @@ build: frontend
 
 dev: frontend
 	bun run dev
+
+# GNOME Shell extension that opens the React tray dropdown on a single click.
+GNOME_EXTENSION := claude-account-switcher@snlperstripes.github.com
+
+gnome-extension:
+	mkdir -p dist
+	gnome-extensions pack --force --extra-source=tray.js -o dist packaging/gnome-shell/$(GNOME_EXTENSION)
+
+install-gnome-extension: gnome-extension
+	gnome-extensions install --force dist/$(GNOME_EXTENSION).shell-extension.zip
+	gnome-extensions enable $(GNOME_EXTENSION) || echo "Log out and back in, then run: gnome-extensions enable $(GNOME_EXTENSION)"

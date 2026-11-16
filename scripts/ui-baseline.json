@@ -1,0 +1,13 @@
+{
+  "allowed": [],
+  "uncovered": [
+    {
+      "file": "frontend/src/shared/Icons.tsx",
+      "reason": "stateless icon components with no behavior; covered visually by existing stories"
+    },
+    {
+      "file": "frontend/src/shared/i18n.ts",
+      "reason": "translation helper; translations exercised through component tests, no dedicated scenario applies"
+    }
+  ]
+}

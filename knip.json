@@ -7,7 +7,8 @@
     },
     "frontend": {
       "entry": ["src/**/*.test.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
     }
   },
   "ignoreBinaries": ["go", "gofmt", "golangci-lint", "gitleaks", "govulncheck"]

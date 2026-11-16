@@ -1,3 +1,4 @@
+import { Progress } from "../../components/ui/progress";
 import type { T } from "../../shared/i18n";
 export function Meter({
   label,
@@ -22,7 +23,7 @@ export function Meter({
           <small>%</small>
         </strong>
       </div>
-      <progress
+      <Progress
         className={value >= threshold ? "full" : value >= 75 ? "warn" : ""}
         max={100}
         value={Math.max(0, Math.min(value, 100))}

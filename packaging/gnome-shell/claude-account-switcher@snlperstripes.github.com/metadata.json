@@ -1,0 +1,7 @@
+{
+  "uuid": "claude-account-switcher@snlperstripes.github.com",
+  "name": "Claude Account Switcher tray",
+  "description": "Opens the Claude Account Switcher tray menu with a single left or right click on its icon.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "url": "https://github.com/SnlperStripes/claude-account-switcher"
+}

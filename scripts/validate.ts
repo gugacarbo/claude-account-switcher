@@ -12,6 +12,7 @@ const profiles: Record<string, string[][]> = {
     ["bun", "run", "knip"],
     ["bun", "run", "test:tools"],
     ["bun", "run", "check:architecture"],
+    ["bun", "run", "check:ui"],
     ["bun", "run", "check:contract"],
     ["bun", "run", "spellcheck"],
   ],

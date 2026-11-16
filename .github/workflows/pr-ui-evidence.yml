@@ -1,0 +1,26 @@
+name: pr-ui-evidence
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  evidence:
+    runs-on: ubuntu-24.04
+    steps:
+      # fetch-depth 0 garante origin/main e o merge-base para o diff.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      # Segurança: evento pull_request (não pull_request_target), payload da
+      # API via GITHUB_EVENT_PATH e nenhum secret exposto. O checkout padrão
+      # deste evento executa o script deste PR, mas com as permissões
+      # read-only declaradas acima, que é a fronteira de confiança aceita.
+      - run: bun run check:pr-evidence
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}

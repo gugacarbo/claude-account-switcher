@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { Button } from "../components/ui/button";
 import { BackIcon, CloseIcon } from "./Icons";
 import type { T } from "./i18n";
 
@@ -32,23 +33,25 @@ export function WindowHeader({
       </div>
       <div className="window-header-actions">
         {onBack ? (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className="window-header-button"
             aria-label={t("Back", "返回")}
             onClick={onBack}
           >
             <BackIcon />
-          </button>
+          </Button>
         ) : null}
-        <button
+        <Button
           type="button"
+          variant="ghost"
           className="window-header-button"
           aria-label={t("Close", "关闭")}
           onClick={onClose}
         >
           <CloseIcon />
-        </button>
+        </Button>
       </div>
       {children}
     </header>

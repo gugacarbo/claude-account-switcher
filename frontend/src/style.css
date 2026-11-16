@@ -1,3 +1,17 @@
+/* Tailwind v4 sem preflight: o app tem reset próprio e a matriz visual
+   versionada (frontend/visual) não pode mudar por adoção de ferramenta.
+   Theme + utilities alimentam os componentes shadcn/ui em src/components/ui;
+   as regras globais do app vivem em @layer base para que as utilities
+   vençam nos componentes shadcn sem alterar as telas atuais. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Tema segue o SO (docs/ui-contract.md): nada de classe .dark fixa. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
 @font-face {
   font-family: "Nunito Sans";
   src: url("./assets/fonts/NunitoSans.ttf") format("truetype-variations");
@@ -23,6 +37,26 @@
   --green: #46724f;
   --shadow: 0 2px 8px #3e342007;
   color-scheme: light dark;
+  /* Tokens semânticos do shadcn/ui derivados dos tokens do app.
+     --card, --muted e --accent mantêm o significado original do app;
+     o @theme inline no fim do arquivo mapeia as utilities shadcn
+     (bg-muted, bg-accent…) para as superfícies corretas. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card-foreground: var(--text);
+  --popover: var(--card);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--bg);
+  --secondary: var(--accent-soft);
+  --secondary-foreground: var(--text);
+  --muted-foreground: var(--muted);
+  --accent-foreground: var(--accent);
+  --destructive: #cb5143;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--accent);
+  --radius: 0.625rem;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -37,38 +71,47 @@
     --accent-soft: #443129;
     --green: #a5c89a;
     --shadow: none;
+    /* Único token shadcn com valor próprio no escuro; os demais fluem
+       dos tokens do app acima via var(). */
+    --destructive: #e0857a;
   }
 }
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-}
-button,
-input {
-  font: inherit;
-}
-button {
-  cursor: pointer;
-  color: inherit;
-}
-button:disabled {
-  opacity: 0.45;
-  cursor: wait;
-}
-button:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-}
-button {
-  transition:
-    background-color 0.13s,
-    border-color 0.13s;
-}
-button:hover:not(:disabled) {
-  filter: brightness(0.95);
+/* Defaults globais do app em @layer base: continuam vencendo o UA para as
+   telas atuais (sem utilities), mas perdem para as utilities Tailwind nos
+   componentes shadcn/ui — ex.: text-primary-foreground, disabled:opacity-50
+   e o anel de foco próprio deles. */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+  }
+  button,
+  input {
+    font: inherit;
+  }
+  button {
+    cursor: pointer;
+    color: inherit;
+  }
+  button:disabled {
+    opacity: 0.45;
+    cursor: wait;
+  }
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+  button {
+    transition:
+      background-color 0.13s,
+      border-color 0.13s;
+  }
+  button:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
 }
 .app {
   max-width: 600px;
@@ -398,9 +441,8 @@ h1 {
   color: var(--muted);
   margin-left: 1px;
 }
-progress {
+.meter [data-slot="progress"] {
   display: block;
-  appearance: none;
   width: 100%;
   height: 5px;
   border: 0;
@@ -409,20 +451,14 @@ progress {
   margin: 6px 0;
   background: var(--line);
 }
-progress::-webkit-progress-bar {
-  background: var(--line);
-}
-progress::-webkit-progress-value {
+.meter [data-slot="progress-indicator"] {
   background: var(--green);
   border-radius: 10px;
 }
-progress::-moz-progress-bar {
-  background: var(--green);
-}
-progress.warn::-webkit-progress-value {
+.meter [data-slot="progress"].warn [data-slot="progress-indicator"] {
   background: #b77b29;
 }
-progress.full::-webkit-progress-value {
+.meter [data-slot="progress"].full [data-slot="progress-indicator"] {
   background: #cb5143;
 }
 .reset {
@@ -608,12 +644,23 @@ footer {
   color: var(--muted);
   margin-top: 5px;
 }
-.setting input {
+.setting [data-slot="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--bg);
   cursor: pointer;
   flex: none;
+}
+.setting [data-slot="checkbox"][data-state="checked"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.setting [data-slot="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .threshold-link {
   display: flex;
@@ -673,10 +720,26 @@ footer {
   font-size: 25px;
   color: var(--muted);
 }
-input[type="range"] {
+.threshold-card [data-slot="slider"] {
   width: 100%;
+  height: 16px;
   margin: 22px 0 15px;
-  accent-color: var(--accent);
+}
+.threshold-card [data-slot="slider-track"] {
+  height: 4px;
+  background: var(--line);
+}
+.threshold-card [data-slot="slider-range"] {
+  background: var(--accent);
+}
+.threshold-card [data-slot="slider-thumb"] {
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+}
+.threshold-card [data-slot="slider-thumb"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .presets {
   display: flex;
@@ -732,8 +795,23 @@ input[type="range"] {
   border-radius: 10px;
   background: var(--card);
 }
-.chat input {
-  accent-color: var(--accent);
+.chat [data-slot="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--bg);
+  cursor: pointer;
+  flex: none;
+}
+.chat [data-slot="checkbox"][data-state="checked"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.chat [data-slot="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .chat span {
   min-width: 0;
@@ -770,5 +848,51 @@ input[type="range"] {
   * {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* Mapeamento das utilities shadcn/ui para os tokens do app.
+   Atenção às colisões de nome: no app --muted é texto secundário e
+   --accent é o terracota da marca; no shadcn são superfícies. Por isso
+   bg-muted → --line e bg-accent → --accent-soft, preservando os dois
+   contratos. Fonte segue a marca (Nunito Sans), não a Geist do preset. */
+@theme inline {
+  --font-sans:
+    "Nunito Sans", "Segoe UI Variable Text", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--line);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }

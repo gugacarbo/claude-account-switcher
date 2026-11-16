@@ -1,5 +1,9 @@
 import { useState } from "react";
 import type { UIState } from "../../bridge";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Slider } from "../../components/ui/slider";
 import type { T } from "../../shared/i18n";
 export function Threshold({
   state,
@@ -30,8 +34,8 @@ export function Threshold({
         )}
       </p>
       <section className="threshold-card">
-        <label className="threshold-value">
-          <input
+        <Label className="threshold-value">
+          <Input
             type="number"
             min="1"
             max="99"
@@ -41,25 +45,25 @@ export function Threshold({
             onChange={(e) => setValue(e.target.value)}
           />
           <span>%</span>
-        </label>
-        <input
-          type="range"
-          min="1"
-          max="99"
-          value={valid ? n : 1}
+        </Label>
+        <Slider
+          min={1}
+          max={99}
+          value={[valid ? n : 1]}
           aria-label={t("Threshold slider", "阈值滑块")}
-          onChange={(e) => setValue(e.target.value)}
+          onValueChange={(values) => setValue(String(values[0]))}
         />
         <div className="presets">
           {[90, 94, 96, 98].map((p) => (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               className={n === p ? "selected" : ""}
               key={p}
               onClick={() => setValue(String(p))}
             >
               {p}%
-            </button>
+            </Button>
           ))}
         </div>
       </section>
@@ -80,11 +84,17 @@ export function Threshold({
               )}
       </p>
       <div className="actions">
-        <button type="button" className="secondary" onClick={dismiss}>
-          {t("Cancel", "取消")}
-        </button>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          className="secondary"
+          onClick={dismiss}
+        >
+          {t("Cancel", "取消")}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
           className="primary"
           disabled={!valid || disabled}
           onClick={async () => {
@@ -95,7 +105,7 @@ export function Threshold({
           }}
         >
           {t("Set threshold", "设置阈值")}
-        </button>
+        </Button>
       </div>
     </>
   );

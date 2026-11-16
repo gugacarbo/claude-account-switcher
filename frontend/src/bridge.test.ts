@@ -1,7 +1,9 @@
+import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { desktopBridge, subscribeNavigation } from "./bridge";
 
 afterEach(() => {
+  cleanup();
   vi.restoreAllMocks();
 });
 

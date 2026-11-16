@@ -10,10 +10,12 @@
       "frontend/visual/**",
       "*.json",
       "scripts/**",
+      "packaging/gnome-shell/**",
       "!**/dist",
       "!frontend/src/contracts.generated.ts"
     ]
   },
+  "css": { "parser": { "tailwindDirectives": true } },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
   "linter": {
     "enabled": true,

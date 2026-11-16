@@ -50,6 +50,26 @@ Headless tests: `go test -tags headless ./...`. A headless executable is only fo
 CLI/core work; it is not a substitute release artifact. No frontend assets or GUI
 runtime dependencies are needed for that explicit build.
 
+## CI commands and UI evidence workflow
+
+- `bun run check:ui` — objective UI contract gate (needs `origin/main` +
+  merge-base; CI checkouts use `fetch-depth: 0`).
+- `bun run check:pr-evidence` — verifies a UI-touching PR body carries the
+  `## UI changes` section with an independent review verdict or an explicit
+  visual-incapacity waiver (workflow `pr-ui-evidence`). Existence check only:
+  it cannot guarantee visual approval.
+- `bun run test:visual` — Playwright matrix (Chromium, Linux CI, 520×720,
+  en-US, light). Approved baselines are committed under
+  `frontend/visual/**-snapshots/`; CI uploads generated screenshots/diffs as
+  artifacts with 14-day retention — they are evidence, not replacement
+  baselines. The workflow only publishes images on top of the versioned
+  baselines until a proven snapshot-storage alternative exists.
+
+Known Chromium limitations (do not claim native coverage): Chromium on Linux
+CI does not render Windows WebView2, macOS WebKit or native Linux
+GTK/WebKit. Font rasterization, scrollbars and DPR differ on those platforms;
+acceptance there remains a manual checklist item above.
+
 ## Platform acceptance checklist
 
 Run on Windows with WebView2, macOS with WebKit, and supported Linux desktops

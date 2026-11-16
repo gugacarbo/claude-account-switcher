@@ -19,9 +19,11 @@
     "test:go": "go test -tags headless ./...",
     "test:race": "go test -race -tags headless ./...",
     "test:tools": "bun test scripts/",
+    "check:pr-evidence": "bun scripts/check-pr-ui-evidence.ts",
     "knip": "knip",
     "knip:production": "knip --production",
     "check:architecture": "bun scripts/check-architecture.ts",
+    "check:ui": "bun scripts/check-ui.ts",
     "check:contract": "go test -count=1 -tags headless -run \"TestUI(Contract|DTOContract)\" ./internal/app",
     "secrets:check": "gitleaks git --redact",
     "security:go": "govulncheck -tags headless ./...",
@@ -34,6 +36,7 @@
     "build:storybook": "bun run --filter claude-account-switcher-ui build:storybook",
     "test:visual": "bun run --filter claude-account-switcher-ui test:visual",
     "test:visual:update": "bun run --filter claude-account-switcher-ui test:visual:update",
+    "capture:story": "bun run --filter claude-account-switcher-ui capture:story",
     "generate:contract": "UPDATE_UI_CONTRACT=1 go test -count=1 -tags headless -run TestUIDTOContract ./internal/app"
   },
   "devDependencies": {
