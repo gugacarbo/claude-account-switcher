@@ -32,7 +32,7 @@ func TestDesktopServiceBindingIDs(t *testing.T) {
 }
 
 func TestDesktopServesBuiltAssetsAndModuleRuntime(t *testing.T) {
-	assets, err := fs.Sub(frontendAssets, "frontend/dist")
+	assets, err := fs.Sub(frontendAssets, "dist")
 	if err != nil {
 		t.Fatal(err)
 	}
