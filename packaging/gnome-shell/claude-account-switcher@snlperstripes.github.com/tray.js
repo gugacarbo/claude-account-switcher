@@ -61,6 +61,24 @@ export function pidFromBusName(busName) {
   return match ? Number(match[1]) : 0;
 }
 
+// resolvePid also handles unique bus names (:1.115). Wails owns the
+// org.kde.StatusNotifierItem-<pid>-1 name, but it registers with the watcher
+// by object path, so the watcher records the sender's UNIQUE name and the
+// AppIndicator extension hands that to us — the regex above cannot read a pid
+// from it. `lookup` asks the bus daemon for the owning process
+// (GetConnectionUnixProcessID), which works for both name forms.
+export function resolvePid(busName, lookup) {
+  const parsed = pidFromBusName(busName);
+  if (parsed) return parsed;
+  if (typeof busName !== "string" || !busName) return 0;
+  try {
+    const pid = lookup(busName);
+    return Number.isInteger(pid) && pid > 0 ? pid : 0;
+  } catch {
+    return 0;
+  }
+}
+
 // menuWindowIndex picks the dropdown among the windows of one process: the
 // panel and the resume prompt are larger, so the smallest mapped window is the
 // dropdown.

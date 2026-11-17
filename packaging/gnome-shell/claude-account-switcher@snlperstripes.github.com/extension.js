@@ -17,6 +17,7 @@
 // session after logging out and back in.
 
 import Clutter from "gi://Clutter";
+import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
@@ -27,7 +28,7 @@ import {
   menuPlacement,
   menuWindowIndex,
   opensMenu,
-  pidFromBusName,
+  resolvePid,
 } from "./tray.js";
 
 // The AppIndicator extension adds icons asynchronously and replaces them when
@@ -102,9 +103,7 @@ export default class SwitcherTrayExtension extends Extension {
       );
       const destroy = icon.connect("destroy", () => this._hooks.delete(icon));
       this._hooks.set(icon, [press, destroy]);
-      probe(
-        `hooked ${icon._indicator.id} pid=${pidFromBusName(icon._indicator.busName)}`,
-      );
+      probe(`hooked ${icon._indicator.id} pid=${this._pid(icon._indicator)}`);
     }
   }
 
@@ -140,9 +139,7 @@ export default class SwitcherTrayExtension extends Extension {
         const win = this._menuWindow(indicator);
         if (win) this._moveUnderIcon(win, rect);
         else if (attempts + 1 === PLACE_ATTEMPTS)
-          probe(
-            `no dropdown window for pid ${pidFromBusName(indicator.busName)}`,
-          );
+          probe(`no dropdown window for pid ${this._pid(indicator)}`);
         attempts += 1;
         if (attempts < PLACE_ATTEMPTS) return GLib.SOURCE_CONTINUE;
         this._placeSource = 0;
@@ -151,11 +148,34 @@ export default class SwitcherTrayExtension extends Extension {
     );
   }
 
+  // The indicator's bus name may be the well-known
+  // org.kde.StatusNotifierItem-<pid>-<n> or the sender's unique name (:1.115):
+  // Wails registers with the watcher by object path, so the watcher records
+  // the unique name. The bus daemon resolves either form to the owning pid.
+  // The call is synchronous but local to the daemon (sub-millisecond), and
+  // only runs while placing the dropdown.
+  _pid(indicator) {
+    return resolvePid(indicator.busName, (name) => {
+      const reply = Gio.DBus.session.call_sync(
+        "org.freedesktop.DBus",
+        "/org/freedesktop/DBus",
+        "org.freedesktop.DBus",
+        "GetConnectionUnixProcessID",
+        new GLib.Variant("(s)", [name]),
+        new GLib.VariantType("(u)"),
+        Gio.DBusCallFlags.NONE,
+        300,
+        null,
+      );
+      return reply.deepUnpack()[0];
+    });
+  }
+
   // An exact title would identify the dropdown, but Wails skips
   // gtk_window_set_title for frameless windows, so every window of the app
-  // shares one. The process id from the StatusNotifierItem bus name narrows the
-  // search to the app, and the dropdown is its smallest mapped window: the
-  // panel and the resume prompt are larger.
+  // shares one. The owning process id narrows the search to the app, and the
+  // dropdown is its smallest mapped window: the panel and the resume prompt
+  // are larger.
   _menuWindow(indicator) {
     const windows = [];
     for (const actor of global.get_window_actors()) {
@@ -164,7 +184,7 @@ export default class SwitcherTrayExtension extends Extension {
       if (isMenuTitle(win.get_title())) return win;
       windows.push(win);
     }
-    const pid = pidFromBusName(indicator.busName);
+    const pid = this._pid(indicator);
     if (!pid) return null;
     const own = windows.filter((win) => win.get_pid() === pid);
     if (!own.length) return null;

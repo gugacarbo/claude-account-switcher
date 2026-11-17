@@ -7,6 +7,7 @@ import {
   menuWindowIndex,
   opensMenu,
   pidFromBusName,
+  resolvePid,
 } from "../packaging/gnome-shell/claude-account-switcher@snlperstripes.github.com/tray.js";
 
 describe("GNOME Shell tray extension", () => {
@@ -93,6 +94,41 @@ describe("GNOME Shell tray extension", () => {
     expect(pidFromBusName("org.kde.StatusNotifierItem-")).toBe(0);
     expect(pidFromBusName("com.example.Other")).toBe(0);
     expect(pidFromBusName(undefined)).toBe(0);
+  });
+
+  // Wails registers with the watcher by object path, so the watcher records
+  // the sender's unique bus name (:1.115) even though the app also owns
+  // org.kde.StatusNotifierItem-<pid>-1. The pid must come from the bus daemon
+  // in that case, or the dropdown is never found and never moved.
+  test("resolves the pid from a unique bus name through the bus daemon", () => {
+    const calls = [];
+    const lookup = (name) => {
+      calls.push(name);
+      return 9755;
+    };
+    expect(resolvePid(":1.115", lookup)).toBe(9755);
+    expect(calls).toEqual([":1.115"]);
+  });
+
+  test("prefers the well-known name and never calls the daemon for it", () => {
+    const lookup = () => {
+      throw new Error("must not be called");
+    };
+    expect(resolvePid("org.kde.StatusNotifierItem-9755-1", lookup)).toBe(9755);
+  });
+
+  test("survives a failing or nonsense daemon lookup", () => {
+    expect(
+      resolvePid(":1.115", () => {
+        throw new Error("NameHasNoOwner");
+      }),
+    ).toBe(0);
+    expect(resolvePid(":1.115", () => 0)).toBe(0);
+    expect(resolvePid(":1.115", () => -3)).toBe(0);
+    expect(resolvePid(":1.115", () => 1.5)).toBe(0);
+    expect(resolvePid(":1.115", () => undefined)).toBe(0);
+    expect(resolvePid("", () => 9755)).toBe(0);
+    expect(resolvePid(undefined, () => 9755)).toBe(0);
   });
 
   test("picks the smallest window of the app as the dropdown", () => {

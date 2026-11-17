@@ -53,11 +53,16 @@ por processo e mantém em cache, e recusa uma versão diferente com "You need to
 log out for changes to take effect" (`extensionSystem.js`, `_canLoad`). Mudança
 na extensão só vale depois de logout/login — não afirme efeito sem essa sessão
 nova. Wails 3.1.0 ignora `Title` em janelas frameless (`linux_purego_gtk3`), por
-isso a extensão identifica o dropdown pelo PID do bus name
-(`org.kde.StatusNotifierItem-<pid>-n`) e pelo menor tamanho de janela mapeada;
-o que ela fez fica em `/tmp/claude-switcher-tray.log` (`log()` não chega ao
-`journalctl`). No Wayland o compositor ignora posição pedida pelo cliente: só o
-`move_frame` da extensão ancora o dropdown.
+isso a extensão identifica o dropdown pelo PID dono do ícone e pelo menor
+tamanho de janela mapeada. O bus name do AppIndicator pode ser o well-known
+`org.kde.StatusNotifierItem-<pid>-n` (parse direto) ou o nome único do remetente
+(`:1.115`): o Wails registra no watcher por object path, então o watcher grava
+o nome único — nesse caso o PID vem de `GetConnectionUnixProcessID` no daemon
+D-Bus (`resolvePid` em `tray.js`). O que a extensão fez fica em
+`/tmp/claude-switcher-tray.log` (`log()` não chega ao `journalctl`);
+`no dropdown window for pid 0` significa que o PID não foi resolvido. No
+Wayland o compositor ignora posição pedida pelo cliente: só o `move_frame` da
+extensão ancora o dropdown.
 
 ## Evoluções condicionais (fora de escopo agora)
 
