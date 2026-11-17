@@ -124,6 +124,51 @@ describe("shared desktop UI", () => {
       expect(api.call).toHaveBeenCalledWith("AnswerResume", "p", [false]),
     );
   });
+  it("confirms a tray switch with the selected chats", async () => {
+    const api = bridge({
+      ...state,
+      resume: {
+        id: "p",
+        account: "Ada",
+        chats: [{ title: "Build app", folder: "app" }],
+        deadline: new Date(Date.now() + 30000).toISOString(),
+        paused: true,
+      },
+    });
+    render(<App bridge={api} view="menu" />);
+    expect(await screen.findByText("Confirm account switch")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Continue selected" }));
+    await waitFor(() => {
+      expect(api.call).toHaveBeenCalledWith("AnswerResume", "p", [true]);
+      expect(api.call).toHaveBeenCalledWith("CloseWindow", "menu");
+    });
+  });
+
+  it("cancels a tray switch without answering the chat selection", async () => {
+    const api = bridge({
+      ...state,
+      resume: {
+        id: "p",
+        account: "Ada",
+        chats: [{ title: "Build app", folder: "app" }],
+        deadline: new Date(Date.now() + 30000).toISOString(),
+        paused: true,
+      },
+    });
+    render(<App bridge={api} view="menu" />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Cancel switch" }),
+    );
+    await waitFor(() =>
+      expect(api.call).toHaveBeenCalledWith("CancelResume", "p"),
+    );
+    expect(api.call).not.toHaveBeenCalledWith(
+      "AnswerResume",
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
   it("shows bridge failures instead of pretending the operation succeeded", async () => {
     const api = bridge();
     vi.mocked(api.call).mockRejectedValue(new Error("Operation failed"));

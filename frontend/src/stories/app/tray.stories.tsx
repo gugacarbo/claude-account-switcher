@@ -8,4 +8,8 @@ const meta = {
 } satisfies Meta;
 export default meta;
 
-export { TrayMenuView, TrayThreeAccounts } from "../app.data";
+export {
+  TrayMenuView,
+  TraySwitchConfirmation,
+  TrayThreeAccounts,
+} from "../app.data";

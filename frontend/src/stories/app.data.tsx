@@ -178,6 +178,24 @@ export const TrayMenuView: Story = {
   },
 };
 
+export const TraySwitchConfirmation: Story = {
+  render: () => (
+    <App
+      bridge={fakeBridge({
+        state: stateWith({
+          resume: makePrompt({
+            chats: Array.from({ length: 5 }, (_, index) => ({
+              title: `Active project ${index + 1}`,
+              folder: `/projects/active-${index + 1}`,
+            })),
+          }),
+        }),
+      })}
+      view="menu"
+    />
+  ),
+};
+
 export const TrayThreeAccounts: Story = {
   render: () => {
     const now = Date.now();

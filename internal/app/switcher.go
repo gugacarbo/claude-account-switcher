@@ -353,7 +353,7 @@ func (s *switcher) runClaimed(what string, f func() error) {
 
 // restart closes the app, runs change on its files and starts it again. If
 // change fails, the app files are put back as they were.
-func (s *switcher) restart(change func(active string) error) error {
+func (s *switcher) restart(change func(active string) error, confirmed ...[]bool) error {
 	restartExe, restartArgs := s.native.restartLaunch()
 	// Claude's keep awake ends when it quits, and a computer that has been
 	// idle long enough would then sleep in the middle of the switch.
@@ -391,7 +391,7 @@ func (s *switcher) restart(change func(active string) error) error {
 			log.Printf("restore backup %s: %v", bk, rerr)
 		}
 	}
-	s.askResume(quitAt, running)
+	s.askResume(quitAt, running, confirmed...)
 	return err
 }
 
@@ -410,19 +410,31 @@ func stayAwake() func() {
 // askResume lets the user pick which of the chats the quit stopped mid-turn
 // the app continues on its start. Nobody answering means all of them, the
 // same as a restart without the switcher.
-func (s *switcher) askResume(quitAt time.Time, running map[string]bool) {
+func (s *switcher) cutChats(quitAt time.Time, running map[string]bool) ([]cutChat, string) {
 	uuid, err := s.app().activeAccount()
 	s.mu.Lock()
 	a := s.account(uuid)
 	s.mu.Unlock()
 	if err != nil || a == nil {
-		return
+		return nil, ""
 	}
-	cut := takeCutChats(s.app().sessionsDir(), a.UUID, a.Org, quitAt, running)
+	return takeCutChats(s.app().sessionsDir(), a.UUID, a.Org, quitAt, running), a.label()
+}
+
+func (s *switcher) askResume(quitAt time.Time, running map[string]bool, confirmed ...[]bool) {
+	cut, label := s.cutChats(quitAt, running)
 	if len(cut) == 0 {
 		return
 	}
-	keep := chooseResume(a.label(), cut, resumeWait)
+	keep := []bool(nil)
+	if len(confirmed) > 0 {
+		keep = confirmed[0]
+	} else {
+		keep = chooseResume(label, cut, resumeWait)
+	}
+	if keep == nil {
+		return
+	}
 	n := 0
 	for i, c := range cut {
 		if keep[i] {
@@ -433,7 +445,7 @@ func (s *switcher) askResume(quitAt time.Time, running map[string]bool) {
 			log.Printf("clear quit mark of %s: %v", c.path, err)
 		}
 	}
-	log.Printf("%d of %d stopped chats continue in %s", n, len(cut), a.label())
+	log.Printf("%d of %d stopped chats continue in %s", n, len(cut), label)
 }
 
 // saveActive keeps the signed-in account's latest login before it is replaced.
@@ -462,6 +474,23 @@ func (s *switcher) switchTo(uuid string, cause switchCause) error {
 	if _, err := os.Stat(filepath.Join(s.profileDir(uuid), "config.json")); err != nil && uuid != s.snapshot().Active {
 		return fmt.Errorf(tr("no saved sign-in for %s, use Add account", "没有 %s 的已保存登录，请使用“添加账号”"), target.label())
 	}
+	var confirmed [][]bool
+	if cause == byHand {
+		quitAt := time.Now()
+		cut, label := s.cutChats(quitAt, runningChats(projectsDir(), quitAt))
+		if len(cut) > 0 {
+			keep := chooseResume(label, cut, resumeWait)
+			if keep == nil {
+				for _, c := range cut {
+					if err := clearCutMark(c.path); err != nil {
+						log.Printf("clear canceled quit mark of %s: %v", c.path, err)
+					}
+				}
+				return errors.New(tr("switch canceled", "已取消切换"))
+			}
+			confirmed = append(confirmed, keep)
+		}
+	}
 	s.setStatus(fmt.Sprintf(tr("Switching to %s…", "正在切换到 %s…"), target.label()))
 	err := s.restart(func(active string) error {
 		if active == uuid {
@@ -478,7 +507,7 @@ func (s *switcher) switchTo(uuid string, cause switchCause) error {
 		s.importProjects(target)
 		s.importSSHChats(target)
 		return err
-	})
+	}, confirmed...)
 	if err == nil {
 		s.mu.Lock()
 		s.st.LastSwitch = time.Now()

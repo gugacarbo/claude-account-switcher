@@ -20,4 +20,5 @@ func registerUIBindings() {
 	application.RegisterBindingMethodID((*UIService).Quit, 11)
 	application.RegisterBindingMethodID((*UIService).AnswerResume, 12)
 	application.RegisterBindingMethodID((*UIService).PauseResume, 13)
+	application.RegisterBindingMethodID((*UIService).CancelResume, 14)
 }

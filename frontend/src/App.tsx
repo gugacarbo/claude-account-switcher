@@ -78,6 +78,35 @@ export function App({
     });
     return off;
   }, [bridge, unified]);
+  const t: T = (en, zh) => (state?.lang === "zh-CN" ? zh : en);
+  // A manual switch can ask for confirmation before Claude is restarted. Keep
+  // that decision in the tray instead of opening a second window.
+  if (view === "menu" && state?.resume) {
+    const prompt = state.resume;
+    const cancel = () => void act("CancelResume", prompt.id);
+    return (
+      <main className="app resume tray-resume">
+        <WindowHeader
+          title={t("Confirm account switch", "确认切换账号")}
+          t={t}
+          onClose={cancel}
+        />
+        {error ? <Alert className="notice error">{error}</Alert> : null}
+        <Resume
+          prompt={prompt}
+          t={t}
+          disabled={pending}
+          act={(method, ...args) =>
+            method === "CloseWindow" && args[0] === "resume"
+              ? act("CloseWindow", "menu")
+              : act(method, ...args)
+          }
+          onCancel={cancel}
+          cancelLabel={t("Cancel switch", "取消切换")}
+        />
+      </main>
+    );
+  }
   // The tray dropdown is its own small window: it renders from the same signed
   // UIState and shares the pending/error handling, but without header or
   // panel sections.
@@ -95,7 +124,6 @@ export function App({
       />
     );
   }
-  const t: T = (en, zh) => (state?.lang === "zh-CN" ? zh : en);
   async function act(method: string, ...args: unknown[]) {
     setPending(true);
     setError("");

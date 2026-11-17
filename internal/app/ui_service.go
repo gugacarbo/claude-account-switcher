@@ -189,6 +189,17 @@ func (u *UIService) AnswerResume(id string, keep []bool) error {
 	return u.prompts.answer(id, keep)
 }
 
+func (u *UIService) CancelResume(id string) error {
+	if u.prompts == nil {
+		return errors.New("no resume prompt")
+	}
+	if err := u.prompts.abort(id); err != nil {
+		return err
+	}
+	u.s.onChange()
+	return nil
+}
+
 func (u *UIService) PauseResume(id string) error {
 	if u.prompts == nil {
 		return errors.New("no resume prompt")
@@ -301,6 +312,20 @@ func (h *resumeHub) answer(id string, keep []bool) error {
 		return errors.New("resume prompt already answered")
 	}
 }
+func (h *resumeHub) abort(id string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.prompt == nil || h.prompt.ID != id {
+		return errors.New("resume prompt has expired")
+	}
+	select {
+	case h.answers <- nil:
+		return nil
+	default:
+		return errors.New("resume prompt already answered")
+	}
+}
+
 func (h *resumeHub) cancel() {
 	h.mu.Lock()
 	defer h.mu.Unlock()

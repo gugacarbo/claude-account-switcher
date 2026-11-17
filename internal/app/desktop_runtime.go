@@ -177,6 +177,13 @@ func runDesktop(s *switcher, lock net.Listener) {
 	}
 	service.quit = app.Quit
 	resumeInUI = func(req resumeRequest, wait time.Duration) []bool {
+		if menuWin.IsVisible() {
+			menuWin.SetSize(340, 480)
+			result := hub.ask(req, wait, func() { app.Event.Emit("state-changed") })
+			menuWin.SetSize(340, trayMenuHeight(len(service.State().Accounts)))
+			app.Event.Emit("state-changed")
+			return result
+		}
 		result := hub.ask(req, wait, func() { windows["resume"].Show().Focus(); app.Event.Emit("state-changed") })
 		windows["resume"].Hide()
 		app.Event.Emit("state-changed")

@@ -10,11 +10,15 @@ export function Resume({
   t,
   disabled,
   act,
+  onCancel,
+  cancelLabel,
 }: {
   prompt: Prompt | null;
   t: T;
   disabled: boolean;
   act: (method: string, ...args: unknown[]) => Promise<boolean>;
+  onCancel?: () => void;
+  cancelLabel?: string;
 }) {
   const [keep, setKeep] = useState(() => p?.chats.map(() => true) ?? []),
     [now, setNow] = useState(Date.now());
@@ -50,6 +54,14 @@ export function Resume({
         )}
       </p>
       <div className="chat-list-actions">
+        <p className="fine-print" role="status">
+          {p.paused
+            ? t("Waiting for you", "等你选择")
+            : t(
+                `All chats continue automatically in ${seconds}s if you do not answer.`,
+                `若未作选择，所有对话将在 ${seconds} 秒后自动继续。`,
+              )}
+        </p>
         <Button
           type="button"
           variant="link"
@@ -82,23 +94,17 @@ export function Resume({
           </Label>
         ))}
       </section>
-      <p className="fine-print" role="status">
-        {p.paused
-          ? t("Waiting for you", "等你选择")
-          : t(
-              `All chats continue automatically in ${seconds}s if you do not answer.`,
-              `若未作选择，所有对话将在 ${seconds} 秒后自动继续。`,
-            )}
-      </p>
       <div className="actions">
         <Button
           type="button"
           variant="ghost"
           className="secondary"
           disabled={disabled || (!p.paused && seconds === 0)}
-          onClick={() => answer(p.chats.map(() => false))}
+          onClick={() =>
+            onCancel ? onCancel() : answer(p.chats.map(() => false))
+          }
         >
-          {t("Don’t continue", "不继续")}
+          {cancelLabel ?? t("Don’t continue", "不继续")}
         </Button>
         <Button
           type="button"

@@ -235,6 +235,40 @@ body:has(.tray-menu) {
   overflow: hidden;
 }
 
+.tray-resume {
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-width: 100%;
+  max-height: 480px;
+  padding: 12px;
+  overflow: hidden;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.tray-resume .window-header {
+  margin-bottom: 16px;
+}
+
+.tray-resume .window-header-title {
+  font-size: 18px;
+}
+
+.tray-resume .chat-list {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.tray-resume .window-header,
+.tray-resume .intro,
+.tray-resume .chat-list-actions,
+.tray-resume .fine-print,
+.tray-resume .actions {
+  flex: none;
+}
+
 .tray-menu-status {
   margin: 0;
   padding: 10px 12px;
@@ -323,7 +357,7 @@ body:has(.tray-menu) {
 }
 
 .tray-account-sub {
-  display: flex;
+  display: none;
   flex: none;
   flex-direction: column;
   gap: 1px;
@@ -354,7 +388,7 @@ body:has(.tray-menu) {
 }
 
 .tray-account-meters {
-  display: none;
+  display: flex;
   flex: none;
   flex-direction: column;
   justify-content: center;
@@ -393,12 +427,12 @@ body:has(.tray-menu) {
 
 .tray-account:hover .tray-account-sub,
 .tray-account:focus-visible .tray-account-sub {
-  display: none;
+  display: flex;
 }
 
 .tray-account:hover .tray-account-meters,
 .tray-account:focus-visible .tray-account-meters {
-  display: flex;
+  display: none;
 }
 
 .tray-account-pending {
@@ -863,8 +897,14 @@ footer {
 }
 .chat-list-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: -4px 0 8px;
+}
+
+.chat-list-actions .fine-print {
+  margin: 0;
 }
 
 .text-link {

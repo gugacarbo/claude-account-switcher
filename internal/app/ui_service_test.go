@@ -86,6 +86,26 @@ func TestResumePromptAnswersAreValidatedAndTimeoutContinuesAll(t *testing.T) {
 	}
 }
 
+func TestResumePromptCanAbortBeforeSwitch(t *testing.T) {
+	hub := newResumeHub()
+	result := make(chan []bool, 1)
+	ready := make(chan struct{})
+	go func() {
+		result <- hub.ask(resumeRequest{Chats: []resumeChat{{Title: "one"}}}, time.Second, func() { close(ready) })
+	}()
+	<-ready
+	p := hub.snapshot()
+	if err := hub.abort("stale"); err == nil {
+		t.Fatal("accepted stale cancellation")
+	}
+	if err := hub.abort(p.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := <-result; got != nil {
+		t.Fatalf("cancellation = %v, want nil", got)
+	}
+}
+
 func TestUIRejectsConcurrentRestarts(t *testing.T) {
 	s := newSwitcher(t.TempDir())
 	s.st.Accounts = []*Account{{UUID: "a"}}
