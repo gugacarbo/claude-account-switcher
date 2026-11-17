@@ -22,12 +22,25 @@ function remainingTime(
   return `${rest}${minuteUnit}`;
 }
 
+// Absolute reset clock for the hover details: local HH:MM, prefixed with
+// DD/MM when the reset falls on a different local day than today.
 function resetSuffix(reset: string, now: number, t: T): string {
-  const remaining = remainingTime(reset, now);
-  if (remaining === null) return "";
-  return remaining === "now"
-    ? t(" · reset now", " · 现在重置")
-    : t(` · reset in ${remaining}`, ` · ${remaining}后重置`);
+  if (!reset) return "";
+  const timestamp = Date.parse(reset);
+  if (!Number.isFinite(timestamp)) return "";
+  if (timestamp <= now) return t(" · reset now", " · 现在重置");
+  const date = new Date(timestamp);
+  const today = new Date(now);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const clock = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const sameDay =
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+  const when = sameDay
+    ? clock
+    : `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${clock}`;
+  return t(` · reset ${when}`, ` · ${when}重置`);
 }
 
 function TrayMeter({
@@ -76,7 +89,11 @@ export function TrayMenu({
   onEscape?: () => void;
 }) {
   const t: T = (en, zh) => (lang === "zh-CN" ? zh : en);
-  const accounts = state?.accounts ?? [];
+  // The active account always leads the list; the rest keeps backend order
+  // (Array.prototype.sort is stable).
+  const accounts = [...(state?.accounts ?? [])].sort(
+    (a, b) => Number(b.active) - Number(a.active),
+  );
   const disabled = pending || !!state?.busy;
 
   // Roving focus for real keyboard navigation across the menu.

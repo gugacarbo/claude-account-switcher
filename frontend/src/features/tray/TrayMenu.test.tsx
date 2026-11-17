@@ -6,6 +6,7 @@ import { TrayMenu } from "./TrayMenu";
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.unstubAllEnvs();
 });
 
 const state: UIState = {
@@ -138,7 +139,8 @@ describe("TrayMenu account switcher", () => {
     );
   });
 
-  it("shows compact time remaining for session and weekly resets", () => {
+  it("shows the reset clock, with date only when it is not today", () => {
+    vi.stubEnv("TZ", "UTC");
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2030-01-01T10:00:00Z"));
     setup(
@@ -157,8 +159,27 @@ describe("TrayMenu account switcher", () => {
         ],
       },
     );
-    expect(screen.getByText("5h 42% · reset in 2h")).toBeVisible();
-    expect(screen.getByText("week 60% · reset in 4d 2h")).toBeVisible();
+    expect(screen.getByText("5h 42% · reset 12:00")).toBeVisible();
+    expect(screen.getByText("week 60% · reset 05/01 12:00")).toBeVisible();
+  });
+
+  it("sorts the active account first, keeping the order of the rest", () => {
+    setup(
+      {},
+      {
+        ...state,
+        accounts: [
+          state.accounts[1], // Lin
+          state.accounts[2], // Sam
+          state.accounts[0], // Ada (active)
+        ],
+      },
+    );
+    const items = screen.getAllByRole("menuitemradio");
+    expect(items[0]).toHaveAttribute("aria-checked", "true");
+    expect(items[0]).toHaveTextContent("Ada");
+    expect(items[1]).toHaveTextContent("Lin");
+    expect(items[2]).toHaveTextContent("Sam");
   });
 
   it("shows an expired reset as now and omits missing reset times", () => {

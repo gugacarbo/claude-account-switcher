@@ -311,6 +311,12 @@ body:has(.tray-menu) {
   background: transparent;
 }
 
+/* The active account leads the list; a small extra gap separates it from
+   the switchable accounts below. */
+.tray-account.active:not(:last-child) {
+  margin-bottom: 8px;
+}
+
 .tray-account:disabled {
   cursor: default;
 }
