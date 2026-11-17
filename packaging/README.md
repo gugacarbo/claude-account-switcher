@@ -1,5 +1,22 @@
 # Packaging
 
+## Linux — main installation
+
+```bash
+make install
+```
+
+Builds the production binary (frontend embedded) and installs it as the user's
+main installation: `~/.local/bin/claude-switcher`, the app-menu launcher and
+icon under `~/.local/share/`. If the XDG autostart entry already exists, its
+`Exec` is repointed to the installed path — a dev run (`bun run dev`) records
+the temporary `go run` binary in `/tmp` when the autostart toggle is used, and
+that path vanishes on reboot. The script never creates the autostart entry:
+the app's own toggle owns that choice, and it should be used from the
+installed app, not the dev one. The previous binary is kept in
+`dist/claude-switcher.previous`. Install the GNOME Shell extension separately
+(below); it only loads after logout/login.
+
 ## winget
 
 `winget/manifests/` mirrors the layout of [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs).

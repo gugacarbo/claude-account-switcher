@@ -1,4 +1,4 @@
-.PHONY: frontend check build dev gnome-extension install-gnome-extension
+.PHONY: frontend check build dev install gnome-extension install-gnome-extension
 
 frontend:
 	bun install --frozen-lockfile
@@ -14,6 +14,11 @@ build: frontend
 
 dev: frontend
 	bun run dev
+
+# Main Linux installation: production binary in ~/.local/bin/claude-switcher,
+# app-menu launcher + icon, and the autostart Exec repointed when present.
+install:
+	bun scripts/install-linux.ts
 
 # GNOME Shell extension that opens the React tray dropdown on a single click.
 GNOME_EXTENSION := claude-account-switcher@snlperstripes.github.com
