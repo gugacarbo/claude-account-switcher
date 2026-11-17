@@ -39,6 +39,7 @@ func windowOptions(name string) application.WebviewWindowOptions {
 		opts.HideOnEscape = true
 	case "menu":
 		opts.Title = appName() + menuTitleSuffix
+		opts.BackgroundType = application.BackgroundTypeTransparent
 		opts.Width, opts.Height = 340, trayMenuHeight(0)
 		opts.MinWidth, opts.MinHeight = 300, 96
 		opts.AlwaysOnTop = true

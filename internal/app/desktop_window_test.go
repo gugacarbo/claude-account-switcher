@@ -59,6 +59,9 @@ func TestTrayMenuWindowBehavesLikeADropdown(t *testing.T) {
 	if !opts.Frameless {
 		t.Fatal("tray menu must be frameless")
 	}
+	if opts.BackgroundType != application.BackgroundTypeTransparent {
+		t.Fatal("tray menu must have a transparent native background")
+	}
 	if !opts.Hidden {
 		t.Fatal("tray menu must start hidden")
 	}

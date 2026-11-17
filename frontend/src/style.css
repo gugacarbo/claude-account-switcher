@@ -212,9 +212,13 @@ h1 {
   font-size: 20px;
   flex: none;
 }
-/* Tray dropdown: its own frameless window, so it keeps the app surface
-   instead of the host menu implementation. The Go host sizes the window;
-   the CSS pins the working width and caps the height. */
+/* Tray dropdown: transparent native surface, sized by the Go host. Only this
+   view opts out of the app background; panel and resume keep their surfaces. */
+html:has(.tray-menu),
+body:has(.tray-menu) {
+  background: transparent;
+}
+
 .tray-menu {
   display: flex;
   flex-direction: column;
@@ -224,7 +228,7 @@ h1 {
   height: auto;
   max-height: 480px;
   min-height: 0;
-  background: var(--card);
+  background: transparent;
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -270,7 +274,7 @@ h1 {
 
 .tray-account.active {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: transparent;
 }
 
 .tray-account:disabled {

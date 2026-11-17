@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { Account, UIState } from "../../bridge";
 import { Progress } from "../../components/ui/progress";
 import type { T } from "../../shared/i18n";
@@ -81,22 +81,21 @@ export function TrayMenu({
 
   // Roving focus for real keyboard navigation across the menu.
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [cursor, setCursor] = useState(0);
+  const [cursor, setCursor] = useState(-1);
 
   const loading = state === null;
-  // Focus the first enabled row once the account list is on screen.
-  useEffect(() => {
-    if (loading || accounts.length === 0) return;
-    const index = itemRefs.current.findIndex((el) => el && !el.disabled);
-    if (index >= 0) {
-      itemRefs.current[index]?.focus();
-      setCursor(index);
-    }
-  }, [loading, accounts.length]);
 
   // Roving focus skips disabled entries (the active account and, while busy,
   // every row), wrapping around the list.
   const step = (from: number, delta: 1 | -1) => {
+    if (from < 0) {
+      for (let i = 0; i < accounts.length; i++) {
+        const index = delta === 1 ? i : accounts.length - 1 - i;
+        const el = itemRefs.current[index];
+        if (el && !el.disabled) return index;
+      }
+      return -1;
+    }
     for (let i = 1; i <= accounts.length; i++) {
       const index = (from + delta * i + accounts.length * i) % accounts.length;
       const el = itemRefs.current[index];
@@ -126,9 +125,17 @@ export function TrayMenu({
     };
     switch (event.key) {
       case "ArrowDown":
-        return move(step(cursor, 1));
-      case "ArrowUp":
-        return move(step(cursor, -1));
+      case "ArrowUp": {
+        const focused = itemRefs.current.findIndex(
+          (el) => el === document.activeElement,
+        );
+        return move(
+          step(
+            focused >= 0 ? focused : cursor,
+            event.key === "ArrowDown" ? 1 : -1,
+          ),
+        );
+      }
       case "Home": {
         const first = itemRefs.current.findIndex((el) => el && !el.disabled);
         return move(first);
@@ -188,6 +195,7 @@ export function TrayMenu({
                     aria-checked={account.active}
                     className={`tray-account ${account.active ? "active" : ""}`}
                     disabled={account.active || disabled}
+                    onFocus={() => setCursor(index)}
                     onClick={() => onSwitch(account.id)}
                   >
                     <span className="tray-account-head">

@@ -242,6 +242,15 @@ describe("TrayMenu account switcher", () => {
     expect(onQuit).toHaveBeenCalledTimes(1);
   });
 
+  it("opens without focusing an inactive account", () => {
+    setup();
+    const items = screen.getAllByRole("menuitemradio");
+    expect(items[1]).not.toHaveFocus();
+    expect(items[2]).not.toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
+    expect(items[1]).toHaveFocus();
+  });
+
   it("navigates with arrows/Home/End, skipping disabled entries, and Escape asks to close", () => {
     setup();
     const items = screen.getAllByRole("menuitemradio");
