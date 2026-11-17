@@ -32,7 +32,7 @@ export const EMPTY_BASELINE: UiBaseline = { allowed: [], uncovered: [] };
 export function isUiSourceFile(file: string): boolean {
   if (!/\.(tsx|ts)$/.test(file)) return false;
   if (file.endsWith(".test.tsx") || file.endsWith(".test.ts")) return false;
-  if (file.endsWith(".stories.tsx")) return false;
+  if (file.endsWith(".stories.tsx") || file.includes("/stories/")) return false;
   return true;
 }
 
@@ -114,6 +114,7 @@ export function uncoveredComponents(
         !file.endsWith("main.tsx") &&
         !file.includes(".test.") &&
         !file.endsWith(".stories.tsx") &&
+        !file.includes("/stories/") &&
         !exceptions.has(file),
     )
     .filter((file) => !files.includes(`${file.slice(0, -4)}.test.tsx`))

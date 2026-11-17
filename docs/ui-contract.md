@@ -50,7 +50,7 @@ regras de julgamento (reuso, densidade, acessibilidade) ficam para revisão.
 - Temas: claro e escuro (prefers-color-scheme); nenhum tema fixo no app.
 - Dimensões extraídas de `internal/app/desktop_runtime.go`:
   - Telas: 420×640 inicial, mínimo 360×360.
-  - Dropdown de tray: 300 de largura, altura calculada pelo número de contas
+  - Dropdown de tray: 340 de largura, altura calculada pelo número de contas
     (`menuHeight`, até 6 linhas antes de rolar), mínimo 180×96.
 - A matriz visual global do Playwright é 520×720, en-US, claro
   (`frontend/playwright.config.ts`); stories pontuais escuras/estreitas são
@@ -95,7 +95,7 @@ comprovada (≥2 ocorrências reais).
 | `Threshold` | `frontend/src/features/settings/Threshold.tsx` | Controle de threshold dentro de `Settings` | `SwitchThreshold` |
 | `TrayMenu` | `frontend/src/features/tray/TrayMenu.tsx` | Dropdown do tray: resumo das contas, troca com um clique, Abrir/Sair | — |
 
-Storybook: `frontend/src/screens.stories.tsx`. Componentes de feature não são
+Storybook: `frontend/src/stories/`, separado entre `app/`, `components/` e `variants/`. Componentes de feature não são
 importados entre features (gate `check:architecture`); reuso acontece via
 `App.tsx` ou extração para `shared/`.
 

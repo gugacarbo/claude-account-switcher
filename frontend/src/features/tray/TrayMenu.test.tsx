@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UIState } from "../../bridge";
 import { TrayMenu } from "./TrayMenu";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 const state: UIState = {
   accounts: [
@@ -102,6 +105,83 @@ describe("TrayMenu account switcher", () => {
     const linItem = screen.getAllByRole("menuitemradio")[1];
     expect(linItem).toHaveTextContent("Lin");
     expect(linItem.textContent).not.toMatch(/5h|week/);
+  });
+
+  it("provides hover meters with percentages and reset times", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-01-01T10:00:00Z"));
+    setup(
+      {},
+      {
+        ...state,
+        accounts: [
+          {
+            ...state.accounts[0],
+            usage: {
+              ...state.accounts[0].usage!,
+              sessionReset: "2030-01-01T13:53:00Z",
+              weeklyReset: "2030-01-03T15:00:00Z",
+            },
+          },
+        ],
+      },
+    );
+    const meters = screen.getAllByRole("progressbar", { hidden: true });
+    expect(meters).toHaveLength(2);
+    expect(meters[0]).toHaveAttribute("aria-valuenow", "42");
+    expect(meters[1]).toHaveAttribute("aria-valuenow", "60");
+    expect(meters[0].closest(".tray-account-meter")).toHaveTextContent(
+      "42%3h 53min",
+    );
+    expect(meters[1].closest(".tray-account-meter")).toHaveTextContent(
+      "60%2d 5h",
+    );
+  });
+
+  it("shows compact time remaining for session and weekly resets", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-01-01T10:00:00Z"));
+    setup(
+      {},
+      {
+        ...state,
+        accounts: [
+          {
+            ...state.accounts[0],
+            usage: {
+              ...state.accounts[0].usage!,
+              sessionReset: "2030-01-01T12:00:00Z",
+              weeklyReset: "2030-01-05T12:00:00Z",
+            },
+          },
+        ],
+      },
+    );
+    expect(screen.getByText("5h 42% · reset in 2h")).toBeVisible();
+    expect(screen.getByText("week 60% · reset in 4d 2h")).toBeVisible();
+  });
+
+  it("shows an expired reset as now and omits missing reset times", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-01-01T10:00:00Z"));
+    setup(
+      {},
+      {
+        ...state,
+        accounts: [
+          {
+            ...state.accounts[0],
+            usage: {
+              ...state.accounts[0].usage!,
+              sessionReset: "2030-01-01T09:00:00Z",
+              weeklyReset: "",
+            },
+          },
+        ],
+      },
+    );
+    expect(screen.getByText("5h 42% · reset now")).toBeVisible();
+    expect(screen.getByText("week 60%")).toBeVisible();
   });
 
   it("clicking an inactive account switches by UUID and keeps the menu open", () => {

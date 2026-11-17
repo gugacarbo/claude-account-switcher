@@ -1,6 +1,56 @@
 import { useEffect, useRef, useState } from "react";
 import type { Account, UIState } from "../../bridge";
+import { Progress } from "../../components/ui/progress";
 import type { T } from "../../shared/i18n";
+
+function remainingTime(
+  reset: string,
+  now: number,
+  fullMinutes = false,
+): string | null {
+  if (!reset) return null;
+  const timestamp = Date.parse(reset);
+  if (!Number.isFinite(timestamp)) return null;
+  const minutes = Math.max(0, Math.ceil((timestamp - now) / 60_000));
+  if (minutes === 0) return "now";
+  const days = Math.floor(minutes / 1_440);
+  const hours = Math.floor((minutes % 1_440) / 60);
+  const rest = minutes % 60;
+  const minuteUnit = fullMinutes ? "min" : "m";
+  if (days > 0) return `${days}d${hours ? ` ${hours}h` : ""}`;
+  if (hours > 0) return `${hours}h${rest ? ` ${rest}${minuteUnit}` : ""}`;
+  return `${rest}${minuteUnit}`;
+}
+
+function resetSuffix(reset: string, now: number, t: T): string {
+  const remaining = remainingTime(reset, now);
+  if (remaining === null) return "";
+  return remaining === "now"
+    ? t(" · reset now", " · 现在重置")
+    : t(` · reset in ${remaining}`, ` · ${remaining}后重置`);
+}
+
+function TrayMeter({
+  label,
+  value,
+  reset,
+}: {
+  label: string;
+  value: number;
+  reset: string;
+}) {
+  return (
+    <span className="tray-account-meter">
+      <span>{Math.round(value)}%</span>
+      <Progress
+        max={100}
+        value={Math.max(0, Math.min(value, 100))}
+        aria-label={label}
+      />
+      <span>{remainingTime(reset, Date.now(), true) ?? "—"}</span>
+    </span>
+  );
+}
 
 // The tray dropdown is its own frameless window (?view=menu). App keeps the
 // signed UIState and the switch error; this component only renders it. Switch
@@ -150,16 +200,40 @@ export function TrayMenu({
                       ) : null}
                     </span>
                     <span className="tray-account-sub">
-                      {account.email}
+                      <span className="tray-account-email">
+                        {account.email}
+                      </span>
                       {account.usage ? (
-                        <span className="tray-account-usage">
-                          {t(
-                            `5h ${account.usage.session}% · week ${account.usage.weekly}%`,
-                            `5小时 ${account.usage.session}% · 每周 ${account.usage.weekly}%`,
-                          )}
+                        <span className="tray-account-limits">
+                          <span>
+                            {t(
+                              `5h ${account.usage.session}%${resetSuffix(account.usage.sessionReset, Date.now(), t)}`,
+                              `5小时 ${account.usage.session}%${resetSuffix(account.usage.sessionReset, Date.now(), t)}`,
+                            )}
+                          </span>
+                          <span>
+                            {t(
+                              `week ${account.usage.weekly}%${resetSuffix(account.usage.weeklyReset, Date.now(), t)}`,
+                              `每周 ${account.usage.weekly}%${resetSuffix(account.usage.weeklyReset, Date.now(), t)}`,
+                            )}
+                          </span>
                         </span>
                       ) : null}
                     </span>
+                    {account.usage ? (
+                      <span className="tray-account-meters">
+                        <TrayMeter
+                          label={t("5-hour usage", "5小时用量")}
+                          value={account.usage.session}
+                          reset={account.usage.sessionReset}
+                        />
+                        <TrayMeter
+                          label={t("Weekly usage", "每周用量")}
+                          value={account.usage.weekly}
+                          reset={account.usage.weeklyReset}
+                        />
+                      </span>
+                    ) : null}
                     {pending && !account.active ? (
                       <span className="tray-account-pending">
                         {t("Switching…", "切换中…")}

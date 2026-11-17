@@ -71,8 +71,8 @@ func TestTrayMenuWindowBehavesLikeADropdown(t *testing.T) {
 	if !opts.HideOnEscape {
 		t.Fatal("tray menu must close on escape")
 	}
-	if opts.Width != 320 || opts.Height != 440 {
-		t.Fatalf("tray menu must fit quick profiles at 320x440: got %dx%d", opts.Width, opts.Height)
+	if opts.Width != 340 || opts.Height != 96 {
+		t.Fatalf("empty tray menu must start compact at 340x96: got %dx%d", opts.Width, opts.Height)
 	}
 	if opts.URL != "/?view=menu" {
 		t.Fatalf("tray menu url is %q", opts.URL)
@@ -86,6 +86,22 @@ func TestTrayMenuWindowBehavesLikeADropdown(t *testing.T) {
 		if windowOptions(other).Title == opts.Title {
 			t.Fatalf("%s window shares the tray menu title %q", other, opts.Title)
 		}
+	}
+}
+
+func TestTrayMenuHeightFitsAccountsWithoutBlankSpace(t *testing.T) {
+	if got := trayMenuHeight(0); got != 96 {
+		t.Fatalf("empty menu height = %d, want 96", got)
+	}
+	one := trayMenuHeight(1)
+	if one < 140 || one > 180 {
+		t.Fatalf("one-account menu height = %d, want compact content height", one)
+	}
+	if got := trayMenuHeight(3); got != one+2*72 {
+		t.Fatalf("three-account menu height = %d, want %d", got, one+2*72)
+	}
+	if got := trayMenuHeight(20); got != 480 {
+		t.Fatalf("long menu height = %d, want capped height 480", got)
 	}
 }
 

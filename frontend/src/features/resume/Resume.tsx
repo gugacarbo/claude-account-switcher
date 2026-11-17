@@ -36,6 +36,11 @@ export function Resume({
     if (await act("AnswerResume", p!.id, values))
       await act("CloseWindow", "resume");
   }
+  async function deselectAll() {
+    if (p!.paused || (await act("PauseResume", p!.id))) {
+      setKeep(p!.chats.map(() => false));
+    }
+  }
   return (
     <>
       <p className="intro">
@@ -44,6 +49,17 @@ export function Resume({
           `Claude 关闭时这些对话正在进行。使用 ${p.account} 继续。`,
         )}
       </p>
+      <div className="chat-list-actions">
+        <Button
+          type="button"
+          variant="link"
+          className="text-link"
+          disabled={disabled || keep.every((selected) => !selected)}
+          onClick={deselectAll}
+        >
+          {t("Deselect all", "取消全选")}
+        </Button>
+      </div>
       <section className="chat-list">
         {p.chats.map((c, i) => (
           <Label className="chat" key={`${c.folder}:${c.title}`}>

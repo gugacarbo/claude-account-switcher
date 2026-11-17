@@ -45,6 +45,32 @@ describe("Resume", () => {
     expect(actFn).not.toHaveBeenCalled();
   });
 
+  it("deselects every chat with one action", async () => {
+    const actFn = vi.fn(async () => true);
+    render(<Resume prompt={makePrompt()} t={t} disabled={false} act={actFn} />);
+    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
+    await vi.waitFor(() => {
+      for (const box of screen.getAllByRole("checkbox")) {
+        expect(box).not.toBeChecked();
+      }
+    });
+    expect(actFn).not.toHaveBeenCalledWith("PauseResume", "prompt-1");
+    expect(screen.getByRole("button", { name: "Deselect all" })).toBeDisabled();
+  });
+
+  it("pauses the countdown before deselecting every chat", async () => {
+    const actFn = vi.fn(async () => true);
+    const prompt = makePrompt({ paused: false });
+    render(<Resume prompt={prompt} t={t} disabled={false} act={actFn} />);
+    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
+    await vi.waitFor(() => {
+      expect(actFn).toHaveBeenCalledWith("PauseResume", "prompt-1");
+      for (const box of screen.getAllByRole("checkbox")) {
+        expect(box).not.toBeChecked();
+      }
+    });
+  });
+
   it("continues only the selected chats and closes the window", async () => {
     const actFn = vi.fn(async () => true);
     render(<Resume prompt={makePrompt()} t={t} disabled={false} act={actFn} />);

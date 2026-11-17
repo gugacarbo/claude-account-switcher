@@ -39,8 +39,8 @@ func windowOptions(name string) application.WebviewWindowOptions {
 		opts.HideOnEscape = true
 	case "menu":
 		opts.Title = appName() + menuTitleSuffix
-		opts.Width, opts.Height = 320, 440
-		opts.MinWidth, opts.MinHeight = 280, 240
+		opts.Width, opts.Height = 340, trayMenuHeight(0)
+		opts.MinWidth, opts.MinHeight = 300, 96
 		opts.AlwaysOnTop = true
 		opts.HideOnFocusLost = true
 		opts.HideOnEscape = true
@@ -75,6 +75,13 @@ func usesNativeTrayMenu(getenv func(string) string) bool {
 type trayMenuWindow interface {
 	Show() application.Window
 	Focus()
+}
+
+func trayMenuHeight(accounts int) int {
+	if accounts == 0 {
+		return 96
+	}
+	return min(480, 84+accounts*72)
 }
 
 func showPositionedTrayMenu(win trayMenuWindow, position func()) {
@@ -136,6 +143,7 @@ func runDesktop(s *switcher, lock net.Listener) {
 		panel.Show().Focus()
 	}
 	showMenu := func() {
+		menuWin.SetSize(340, trayMenuHeight(len(service.State().Accounts)))
 		showPositionedTrayMenu(menuWin, func() {
 			// On Linux Wails stores the coordinates supplied by Activate or
 			// SecondaryActivate before invoking this handler. Do not query the

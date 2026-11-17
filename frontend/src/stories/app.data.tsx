@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { App } from "./App";
-import type { UIState } from "./bridge";
+import { App } from "../App";
+import type { UIState } from "../bridge";
 import {
   type FakeBridge,
   fakeBridge,
@@ -10,7 +10,7 @@ import {
   makeManyAccounts,
   makePrompt,
   makeUiState,
-} from "./testing/fake-bridge";
+} from "../testing/fake-bridge";
 
 /**
  * Stories render the REAL App with the shared fake bridge: navigation,
@@ -24,13 +24,11 @@ function stateWith(overrides: Partial<UIState>): UIState {
 }
 
 const meta = {
-  title: "App",
   parameters: {
     // Full-bleed frame: App brings its own .app container and header.
     layout: "fullscreen",
   },
 } satisfies Meta;
-export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Connecting: Story = {
@@ -139,8 +137,76 @@ export const ResumeEmpty: Story = {
   ),
 };
 
+export const ResumeManyChats: Story = {
+  render: () => (
+    <App
+      bridge={fakeBridge({
+        state: stateWith({
+          resume: makePrompt({
+            chats: Array.from({ length: 12 }, (_, index) => ({
+              title: `Project conversation ${index + 1}`,
+              folder: `/projects/project-${index + 1}`,
+            })),
+          }),
+        }),
+      })}
+      view="resume"
+    />
+  ),
+};
+
 export const TrayMenuView: Story = {
-  render: () => <App bridge={fakeBridge()} view="menu" />,
+  render: () => {
+    const now = Date.now();
+    const account = makeAccount({
+      usage: {
+        session: 42,
+        weekly: 68,
+        sessionReset: new Date(now + 2 * 60 * 60 * 1000).toISOString(),
+        weeklyReset: new Date(
+          now + (4 * 24 * 60 + 2 * 60) * 60 * 1000,
+        ).toISOString(),
+        checkedAt: new Date(now).toISOString(),
+      },
+    });
+    return (
+      <App
+        bridge={fakeBridge({ state: stateWith({ accounts: [account] }) })}
+        view="menu"
+      />
+    );
+  },
+};
+
+export const TrayThreeAccounts: Story = {
+  render: () => {
+    const now = Date.now();
+    const accounts = makeManyAccounts(3).map((account, index) => ({
+      ...account,
+      active: index === 0,
+      email:
+        index === 1
+          ? "lin.chen.with.a.very.long.email.address.for.tray.overflow@example.com"
+          : account.email,
+      usage: {
+        session: account.usage?.session ?? 42,
+        weekly: account.usage?.weekly ?? 68,
+        sessionReset: new Date(
+          now + (index + 1) * 60 * 60 * 1000,
+        ).toISOString(),
+        weeklyReset: new Date(
+          now + (index + 2) * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        checkedAt: new Date(now).toISOString(),
+      },
+    }));
+    return (
+      <App
+        bridge={fakeBridge({ state: stateWith({ accounts }) })}
+        view="menu"
+      />
+    );
+  },
 };
 
 export const ManyAccountsZh: Story = {

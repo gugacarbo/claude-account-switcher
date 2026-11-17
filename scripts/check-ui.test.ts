@@ -39,6 +39,8 @@ test("isUiSourceFile excludes tests, stories and stylesheets", () => {
   expect(isUiSourceFile("frontend/src/App.tsx")).toBe(true);
   expect(isUiSourceFile("frontend/src/App.test.tsx")).toBe(false);
   expect(isUiSourceFile("frontend/src/screens.stories.tsx")).toBe(false);
+  expect(isUiSourceFile("frontend/src/stories/app.data.tsx")).toBe(false);
+  expect(isUiSourceFile("frontend/src/stories/window-frame.tsx")).toBe(false);
   expect(isUiSourceFile("frontend/src/style.css")).toBe(false);
   expect(isUiSourceFile("frontend/src/bridge.ts")).toBe(true);
 });
@@ -130,8 +132,12 @@ test("uncoveredComponents requires a same-basename test or an exception", () => 
   ).toEqual([]);
 });
 
-test("uncoveredComponents never flags stories files", () => {
-  const files = ["frontend/src/screens.stories.tsx"];
+test("uncoveredComponents never flags stories files or helpers", () => {
+  const files = [
+    "frontend/src/screens.stories.tsx",
+    "frontend/src/stories/app.data.tsx",
+    "frontend/src/stories/window-frame.tsx",
+  ];
   expect(uncoveredComponents(files, EMPTY_BASELINE)).toEqual([]);
 });
 

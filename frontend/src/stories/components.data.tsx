@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
 import { useState } from "react";
-import type { Account, UIState } from "./bridge";
-import { AccountCard } from "./features/accounts/AccountCard";
-import { Resume } from "./features/resume/Resume";
-import { Settings } from "./features/settings/Settings";
-import { Threshold } from "./features/settings/Threshold";
-import { SettingsIcon } from "./shared/Icons";
-import { WindowHeader } from "./shared/WindowHeader";
+import type { Account, UIState } from "../bridge";
+import { AccountCard } from "../features/accounts/AccountCard";
+import { Resume } from "../features/resume/Resume";
+import { Settings } from "../features/settings/Settings";
+import { Threshold } from "../features/settings/Threshold";
+import { SettingsIcon } from "../shared/Icons";
+import { WindowHeader } from "../shared/WindowHeader";
 
 const t = (en: string) => en;
 const act = async () => true;
@@ -43,7 +43,6 @@ const account: Account = {
   },
 };
 const meta = {
-  title: "Screens",
   decorators: [
     (Story) => (
       <main style={{ maxWidth: 480 }}>
@@ -52,7 +51,6 @@ const meta = {
     ),
   ],
 } satisfies Meta;
-export default meta;
 type Story = StoryObj<typeof meta>;
 export const ActiveAccount: Story = {
   render: () => (

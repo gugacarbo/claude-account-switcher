@@ -218,10 +218,10 @@ h1 {
 .tray-menu {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px;
-  width: 320px;
-  height: 100vh;
+  gap: 1px;
+  padding: 5px;
+  width: min(340px, 100%);
+  height: auto;
   max-height: 480px;
   min-height: 0;
   background: var(--card);
@@ -243,30 +243,33 @@ h1 {
 }
 
 .tray-accounts {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .tray-account {
   --wails-draggable: no-drag;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 8px;
   text-align: left;
   font-size: 12px;
-  border: 0;
-  border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
   background: none;
   color: inherit;
+  overflow: hidden;
 }
 
 .tray-account.active {
+  border-color: var(--accent);
   background: var(--accent-soft);
 }
 
@@ -274,10 +277,18 @@ h1 {
   cursor: default;
 }
 
+.tray-account.active:disabled {
+  opacity: 1;
+}
+
 .tray-account:hover:not(:disabled),
 .tray-account:focus-visible {
-  background: var(--accent-soft);
+  background: var(--line);
   filter: none;
+}
+
+.tray-account:focus-visible {
+  outline-color: var(--muted);
 }
 
 .tray-account-head {
@@ -296,6 +307,7 @@ h1 {
 
 .tray-account-head .plan {
   flex: none;
+  padding: 2px 5px;
 }
 
 .tray-account-flag {
@@ -308,16 +320,81 @@ h1 {
 
 .tray-account-sub {
   display: flex;
-  gap: 8px;
+  flex: none;
+  flex-direction: column;
+  gap: 1px;
+  height: 29px;
   font-size: 10px;
   color: var(--muted);
   min-width: 0;
 }
 
-.tray-account-sub > span {
+.tray-account-email {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tray-account-limits {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tray-account-limits > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray-account-meters {
+  display: none;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  height: 29px;
+  color: var(--muted);
+}
+
+.tray-account-meter {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 62px;
+  align-items: center;
+  gap: 8px;
+  height: 12px;
+  font-size: 10px;
+  line-height: 12px;
+}
+
+.tray-account-meter > span:last-child {
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray-account-meter [data-slot="progress"] {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.tray-account-meter [data-slot="progress-indicator"] {
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.tray-account:hover .tray-account-sub,
+.tray-account:focus-visible .tray-account-sub {
+  display: none;
+}
+
+.tray-account:hover .tray-account-meters,
+.tray-account:focus-visible .tray-account-meters {
+  display: flex;
 }
 
 .tray-account-pending {
@@ -329,7 +406,7 @@ h1 {
   --wails-draggable: no-drag;
   display: block;
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 8px;
   text-align: left;
   font-size: 13px;
   border: 0;
@@ -780,6 +857,23 @@ footer {
 .secondary {
   background: none;
 }
+.chat-list-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 8px;
+}
+
+.text-link {
+  height: auto;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .chat-list {
   display: grid;
   gap: 10px;
