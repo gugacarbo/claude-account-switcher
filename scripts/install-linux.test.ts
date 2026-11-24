@@ -3,6 +3,7 @@ import {
   autostartAction,
   autostartEntry,
   desktopExecQuote,
+  extensionAction,
   launcherEntry,
 } from "./install-linux";
 
@@ -56,5 +57,32 @@ describe("install-linux", () => {
   test("rewrites an existing autostart entry and never creates one", () => {
     expect(autostartAction(true)).toBe("rewrite");
     expect(autostartAction(false)).toBe("skip");
+  });
+
+  test("reinstalls the GNOME extension only when a packaged file differs", () => {
+    const packaged = new Map([
+      ["metadata.json", "{}"],
+      ["tray.js", "new"],
+    ]);
+    expect(extensionAction(packaged, null)).toBe("install");
+    expect(extensionAction(packaged, new Map([["metadata.json", "{}"]]))).toBe(
+      "install",
+    );
+    expect(
+      extensionAction(
+        packaged,
+        new Map([
+          ["metadata.json", "{}"],
+          ["tray.js", "old"],
+        ]),
+      ),
+    ).toBe("install");
+    // gnome-extensions install may add files of its own.
+    expect(
+      extensionAction(
+        packaged,
+        new Map([...packaged, ["schemas", "compiled"]]),
+      ),
+    ).toBe("current");
   });
 });

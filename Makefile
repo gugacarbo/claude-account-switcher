@@ -16,7 +16,8 @@ dev: frontend
 	bun run dev
 
 # Main Linux installation: production binary in ~/.local/bin/claude-switcher,
-# app-menu launcher + icon, and the autostart Exec repointed when present.
+# app-menu launcher + icon, the autostart Exec repointed when present, and the
+# GNOME Shell extension reinstalled when it differs from the packaged one.
 install:
 	bun scripts/install-linux.ts
 

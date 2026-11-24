@@ -14,8 +14,9 @@ the temporary `go run` binary in `/tmp` when the autostart toggle is used, and
 that path vanishes on reboot. The script never creates the autostart entry:
 the app's own toggle owns that choice, and it should be used from the
 installed app, not the dev one. The previous binary is kept in
-`dist/claude-switcher.previous`. Install the GNOME Shell extension separately
-(below); it only loads after logout/login.
+`dist/claude-switcher.previous`. On GNOME Shell it also compares the installed
+tray extension (below) with the packaged one and reinstalls it when a file
+differs; the new copy only loads after logout/login.
 
 ## winget
 
