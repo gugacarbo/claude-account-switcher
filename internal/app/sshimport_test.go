@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -96,15 +97,21 @@ func TestFetchSSHChats(t *testing.T) {
 	desktop := func(session, path string) sshChat {
 		return sshChat{Session: session, Path: path, Entrypoint: "claude-desktop", Cwd: "/w"}
 	}
+	// old-1 went on as new-1 after /clear, and a known chat continues old-3.
+	newer := desktop("new-1", "/p/new-1.jsonl")
+	newer.Ancestors = []string{"old-1"}
 	outputs := map[string]string{
-		"a@h1": line(desktop("new-1", "/p/new-1.jsonl")) +
+		"a@h1": line(newer) +
+			line(desktop("old-1", "/p/old-1.jsonl")) +
+			line(desktop("old-3", "/p/old-3.jsonl")) +
 			line(sshChat{Session: "cli-1", Entrypoint: "cli"}) +
 			line(desktop("known-1", "/p/known-1.jsonl")) +
 			line(desktop("gone-cli", "/p/gone.jsonl")) +
 			line(desktop("dup", "/p/dup-a.jsonl")) +
 			"\n",
 		"c@h3": line(desktop("dup", "/p/dup-c.jsonl")) +
-			line(desktop("new-3", "/p/new-3.jsonl")),
+			line(desktop("new-3", "/p/new-3.jsonl")) +
+			line(sshChat{Session: "known-1", Path: "/p/known-1.jsonl", Known: true, Ancestors: []string{"old-3"}}),
 	}
 
 	var mu sync.Mutex
@@ -122,7 +129,10 @@ func TestFetchSSHChats(t *testing.T) {
 		return []byte(outputs[host]), nil
 	})
 
-	got := fetchSSHChats(context.Background(), userData, root)
+	got, failed := fetchSSHChats(context.Background(), userData, root)
+	if !reflect.DeepEqual(failed, map[string]bool{"b@h2": true}) {
+		t.Fatalf("failed hosts = %v, want b@h2", failed)
+	}
 	want := []sshChat{
 		{Host: "a@h1", Path: "/p/dup-a.jsonl", Session: "dup", Entrypoint: "claude-desktop", Cwd: "/w"},
 		{Host: "a@h1", Path: "/p/new-1.jsonl", Session: "new-1", Entrypoint: "claude-desktop", Cwd: "/w"},
@@ -140,6 +150,66 @@ func TestFetchSSHChats(t *testing.T) {
 		if !strings.HasPrefix(s, prefix) || !strings.Contains(s, "import glob, json, os") {
 			t.Fatalf("stdin does not start with the known list and script: %q", s[:min(len(s), 80)])
 		}
+	}
+}
+
+func TestKeepFailedHosts(t *testing.T) {
+	fresh := []sshChat{{Host: "up", Session: "b"}}
+	cached := []sshChat{{Host: "up", Session: "gone"}, {Host: "down", Session: "c"}, {Host: "down", Session: "b"}, {Host: "down", Session: "a"}}
+	got := keepFailedHosts(fresh, cached, map[string]bool{"down": true})
+	want := []sshChat{{Host: "down", Session: "a"}, {Host: "up", Session: "b"}, {Host: "down", Session: "c"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("keepFailedHosts = %+v, want %+v", got, want)
+	}
+}
+
+// The script runs on the SSH host; this runs it against a local projects folder.
+func TestSSHRemoteScriptReportsLineage(t *testing.T) {
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		t.Skip("python3 not installed")
+	}
+	home := t.TempDir()
+	dir := filepath.Join(home, ".claude", "projects", "-w")
+	lines := func(entries ...string) string { return strings.Join(entries, "\n") + "\n" }
+	sshTestWrite(t, filepath.Join(dir, "old.jsonl"), lines(
+		`{"type":"derived-from","sessionId":"old","sessions":[{"type":"unknown","id":null,"via":"launch","started":"old"}]}`,
+		`{"type":"user","timestamp":"2026-11-24T10:00:00Z","cwd":"/w","entrypoint":"claude-desktop"}`))
+	sshTestWrite(t, filepath.Join(dir, "new.jsonl"), lines(
+		`{"type":"custom-title","customTitle":"Same chat","sessionId":"new"}`,
+		`{"type":"derived-from","sessionId":"new","sessions":[{"type":"unknown","id":null,"via":"launch","started":"new"},{"type":"claude_code_session","id":"old","via":"clear"}]}`,
+		`not json`,
+		`{"type":"user","timestamp":"2026-11-24T11:00:00Z","cwd":"/w","entrypoint":"claude-desktop"}`))
+	sshTestWrite(t, filepath.Join(dir, "known.jsonl"), lines(
+		`{"type":"user","timestamp":"2026-11-24T09:00:00Z","cwd":"/w","entrypoint":"claude-desktop"}`,
+		`{"type":"derived-from","sessionId":"known","sessions":[{"type":"claude_code_session","id":"gone","via":"fork"}]}`))
+	sshTestWrite(t, filepath.Join(dir, "plain.jsonl"), lines(
+		`{"type":"user","timestamp":"2026-11-24T08:00:00Z","cwd":"/w","entrypoint":"claude-desktop"}`))
+	sshTestWrite(t, filepath.Join(dir, "known-plain.jsonl"), lines(
+		`{"type":"user","timestamp":"2026-11-24T08:00:00Z","cwd":"/w","entrypoint":"claude-desktop"}`))
+
+	cmd := exec.Command(python, "-")
+	cmd.Env = append(os.Environ(), "HOME="+home)
+	cmd.Stdin = strings.NewReader(`KNOWN = set(["known","known-plain"])` + "\n" + sshRemoteScript)
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("script failed: %v", err)
+	}
+	got := map[string]sshChat{}
+	for _, c := range parseSSHChats("h", out) {
+		got[c.Session] = c
+	}
+	if _, ok := got["known-plain"]; ok || len(got) != 4 {
+		t.Fatalf("script reported %v, want known, new, old and plain", got)
+	}
+	if c := got["new"]; !reflect.DeepEqual(c.Ancestors, []string{"old"}) || c.Title != "Same chat" || c.Known || c.First != "2026-11-24T11:00:00Z" {
+		t.Fatalf("new = %+v", c)
+	}
+	if c := got["known"]; !c.Known || !reflect.DeepEqual(c.Ancestors, []string{"gone"}) || c.Cwd != "" {
+		t.Fatalf("known = %+v, want only its ancestors", c)
+	}
+	if c := got["old"]; len(c.Ancestors) != 0 || c.Cwd != "/w" {
+		t.Fatalf("old = %+v, its own launch is not an ancestor", c)
 	}
 }
 

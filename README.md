@@ -180,7 +180,7 @@ After any automatic switch, from either toggle, the top of the menu says why for
 
 A chat opened over SSH on another computer keeps its transcript on that computer, so this one has no entry for it and the chat does not show up in the list.
 
-**Import chats from SSH hosts** in the menu is off by default. With it on, the switcher runs `ssh -o BatchMode=yes <host> python3 -` against the hosts listed in Claude's `ssh_configs.json` and in existing chat entries. On each host it only reads `~/.claude/projects`, and it adds the missing entries at the next switch or when you click **Import chats from all accounts**. It also looks every 30 minutes in the background, and that never restarts Claude.
+**Import chats from SSH hosts** in the menu is off by default. With it on, the switcher runs `ssh -o BatchMode=yes <host> python3 -` against the hosts listed in Claude's `ssh_configs.json` and in existing chat entries. On each host it only reads `~/.claude/projects`, and it adds the missing entries at the next switch or when you click **Import chats from all accounts**. Each switch asks the hosts again while Claude closes (up to 20 seconds; a host that does not answer keeps the chats found before). It also looks every 30 minutes in the background, and that never restarts Claude. A transcript that a later one continues (after `/clear`, a fork or a compaction) is left out, so a chat shows up once.
 
 It needs key-based ssh that works without a password prompt, and python3 on the host. The host is only read, never written.
 

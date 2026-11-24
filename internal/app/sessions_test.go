@@ -155,6 +155,53 @@ func TestSyncSessionsKeepsNewerChatAfterClear(t *testing.T) {
 	}
 }
 
+// The app rewrites an SSH chat's entry with a new reattach checkpoint, or
+// archives a chat, without new activity. The later write still has to reach
+// the other accounts, or the next start reattaches from a stale checkpoint.
+func TestSyncSessionsFollowsRewriteWithoutActivity(t *testing.T) {
+	root := t.TempDir()
+	base := time.Date(2026, 11, 24, 18, 0, 0, 0, time.UTC)
+	stamp := func(path string, at time.Time) {
+		t.Helper()
+		if err := os.Chtimes(path, at, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fresh := filepath.Join(root, "a", "oa", "local_ssh.json")
+	write(t, fresh, `{"cliSessionId":"ssh","lastActivityAt":100,"sshReattach":{"processId":"p","checkpoint":{"seq":26773}}}`)
+	stamp(fresh, base.Add(time.Minute))
+	stale := filepath.Join(root, "b", "ob", "local_ssh.json")
+	write(t, stale, `{"cliSessionId":"ssh","lastActivityAt":100,"sshReattach":{"processId":"p","checkpoint":{"seq":26578}}}`)
+	stamp(stale, base)
+	kept := filepath.Join(root, "b", "ob", "local_kept.json")
+	want := `{"cliSessionId":"kept","lastActivityAt":100,"isArchived":true}`
+	write(t, kept, want)
+	stamp(kept, base.Add(time.Hour))
+	older := filepath.Join(root, "a", "oa", "local_kept.json")
+	write(t, older, `{"cliSessionId":"kept","lastActivityAt":100,"isArchived":false}`)
+	stamp(older, base)
+
+	for i := range 2 {
+		n, err := syncSessions(root, "b", "ob")
+		if err != nil || (i == 0 && n != 1) || (i == 1 && n != 0) {
+			t.Fatalf("sync %d = %d, %v", i, n, err)
+		}
+	}
+	if read(t, stale) != read(t, fresh) {
+		t.Fatal("the later rewrite with the same activity did not reach the other account")
+	}
+	if read(t, kept) != want {
+		t.Fatal("an earlier write with the same activity replaced the target")
+	}
+	// The copy keeps the source's time, so neither side looks newer afterwards.
+	if n, err := syncSessions(root, "a", "oa"); err != nil || n != 1 {
+		t.Fatalf("sync back = %d, %v; want only the archived chat", n, err)
+	}
+	if read(t, older) != want {
+		t.Fatal("the archived chat did not go back to the first account")
+	}
+}
+
 func TestSyncSessionsReportsWriteFailure(t *testing.T) {
 	root := t.TempDir()
 	write(t, filepath.Join(root, "a", "oa", "local_valid.json"), `{"cliSessionId":"valid","lastActivityAt":100}`)

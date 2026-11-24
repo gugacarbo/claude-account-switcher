@@ -126,7 +126,7 @@ type switcher struct {
 	st       State
 	active   string
 	busy     atomic.Bool
-	sshBusy  atomic.Bool
+	sshMu    sync.Mutex
 	status   string
 	addingAt time.Time
 	// signedInAt is when the switcher saw Claude signed in with another
@@ -559,6 +559,7 @@ func (s *switcher) switchTo(uuid string, cause switchCause) error {
 		}
 	}
 	s.setStatus(fmt.Sprintf(tr("Switching to %s…", "正在切换到 %s…"), target.label()))
+	fetched := s.startSSHFetch(sshSwitchWait)
 	err := s.restart(func(active string) error {
 		if active == uuid {
 			return nil
@@ -572,6 +573,7 @@ func (s *switcher) switchTo(uuid string, cause switchCause) error {
 		n, err := syncSessions(s.app().sessionsDir(), target.UUID, target.Org)
 		log.Printf("switched to %s, %d chats imported", target.label(), n)
 		s.importProjects(target)
+		fetched()
 		s.importSSHChats(target)
 		return err
 	}, confirmed...)
@@ -616,6 +618,8 @@ func (s *switcher) addAccount() error {
 // importChats makes the chats of all accounts visible in the signed-in one.
 func (s *switcher) importChats() error {
 	s.setStatus(tr("Importing chats…", "正在导入聊天…"))
+	// Claude keeps running while the hosts answer.
+	s.startSSHFetch(sshImportWait)()
 	return s.restart(s.importInto)
 }
 
@@ -653,20 +657,78 @@ func (s *switcher) importProjects(a *Account) {
 // sshCachePath is where fetchSSH keeps the chats it found on the SSH hosts.
 func (s *switcher) sshCachePath() string { return filepath.Join(s.dir, "ssh-chats.json") }
 
+// How long a switch waits for the SSH hosts, while Claude is closed, and how
+// long Import waits before it closes Claude. A host that takes longer keeps
+// the chats it had before.
+const (
+	sshSwitchWait = 20 * time.Second
+	sshImportWait = 90 * time.Second
+)
+
 // fetchSSH asks the SSH hosts for chats the desktop does not list yet and
 // saves them. It does nothing while SSHImport is off, and never restarts
 // Claude. A run that is already going makes this one return at once.
 func (s *switcher) fetchSSH(ctx context.Context) {
-	s.mu.Lock()
-	on := s.st.SSHImport
-	s.mu.Unlock()
-	if !on || !s.sshBusy.CompareAndSwap(false, true) {
+	if !s.sshImportOn() || !s.sshMu.TryLock() {
 		return
 	}
-	defer s.sshBusy.Store(false)
+	defer s.sshMu.Unlock()
+	s.runSSHFetch(ctx)
+}
 
+// fetchSSHWait is fetchSSH for a switch: it waits for a run that is already
+// going, then fetches again, so chats started since that run are found too.
+func (s *switcher) fetchSSHWait(ctx context.Context) {
+	if !s.sshImportOn() {
+		return
+	}
+	for !s.sshMu.TryLock() {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+	defer s.sshMu.Unlock()
+	if ctx.Err() == nil {
+		s.runSSHFetch(ctx)
+	}
+}
+
+// startSSHFetch starts fetchSSHWait in the background and returns a function
+// that waits for it, at most wait after the start. Fetching while Claude quits
+// lets a switch import the chats of the last minutes, not of the last run.
+func (s *switcher) startSSHFetch(wait time.Duration) func() {
+	if !s.sshImportOn() {
+		return func() {}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer cancel()
+		s.fetchSSHWait(ctx)
+	}()
+	return func() { <-done }
+}
+
+func (s *switcher) sshImportOn() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.st.SSHImport
+}
+
+// runSSHFetch fetches and saves the SSH chats; the caller holds sshMu.
+func (s *switcher) runSSHFetch(ctx context.Context) {
 	d := s.app()
-	chats := fetchSSHChats(ctx, d.dir, d.sessionsDir())
+	chats, failed := fetchSSHChats(ctx, d.dir, d.sessionsDir())
+	if len(failed) > 0 {
+		cached, err := loadSSHCache(s.sshCachePath())
+		if err != nil {
+			log.Printf("ssh chats of unreachable hosts dropped: %v", err)
+		}
+		chats = keepFailedHosts(chats, cached, failed)
+	}
 	if err := saveSSHCache(s.sshCachePath(), chats); err != nil {
 		log.Printf("save ssh chats: %v", err)
 		return

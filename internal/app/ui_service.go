@@ -118,12 +118,7 @@ func (u *UIService) AddAccount() error {
 	return u.launch(tr("Add account", "添加账号"), u.s.addAccount)
 }
 func (u *UIService) ImportChats() error {
-	return u.launch(tr("Import", "导入"), func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
-		defer cancel()
-		u.s.fetchSSH(ctx)
-		return u.s.importChats()
-	})
+	return u.launch(tr("Import", "导入"), u.s.importChats)
 }
 func (u *UIService) InstallUpdate() error {
 	v := u.s.snapshot().Update

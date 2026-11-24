@@ -24,6 +24,12 @@ import (
 // it never deletes anything. Local IDs differ between accounts; cliSessionId
 // identifies the actual conversation. An existing target entry keeps its own
 // local ID and account-specific settings. Returns how many entries it wrote.
+//
+// A copy is older when its lastActivityAt is lower or, with the same activity,
+// when its file was written earlier: the app rewrites an entry without new
+// activity for state such as archiving, starring, and the reattach checkpoint
+// of an SSH chat's remote process. Copies keep their source's file time, so an
+// unchanged chat is not copied back and forth.
 func syncSessions(root, account, org string) (int, error) {
 	target := filepath.Join(root, account, org)
 	dirs, err := filepath.Glob(filepath.Join(root, "*", "*"))
@@ -81,7 +87,7 @@ func syncSessions(root, account, org string) (int, error) {
 		}
 	}
 	// A new account imports the freshest copy once, even with many source aliases.
-	sort.SliceStable(sources, func(i, j int) bool { return sources[i].activity > sources[j].activity })
+	sort.SliceStable(sources, func(i, j int) bool { return sources[i].newer(sources[j]) })
 
 	if err := os.MkdirAll(target, 0o700); err != nil {
 		return 0, err
@@ -104,10 +110,14 @@ func syncSessions(root, account, org string) (int, error) {
 		// can still differ: /clear moves a chat to a new one. The newer copy
 		// wins either way, or the chat would stay apart in the accounts forever.
 		old, exists := targets[s.name]
-		if exists && s.activity <= old.activity {
+		if exists && !s.newer(old) {
 			continue
 		}
-		if err := copyFile(s.path, filepath.Join(target, s.name)); err != nil {
+		dst := filepath.Join(target, s.name)
+		if err := copyFile(s.path, dst); err != nil {
+			return written, err
+		}
+		if err := os.Chtimes(dst, s.mod, s.mod); err != nil {
 			return written, err
 		}
 		written++
@@ -126,6 +136,15 @@ func syncSessions(root, account, org string) (int, error) {
 type sessionIndex struct {
 	path, name, cli string
 	activity        int64
+	mod             time.Time
+}
+
+// newer reports whether s is a later copy of a chat than o.
+func (s sessionIndex) newer(o sessionIndex) bool {
+	if s.activity != o.activity {
+		return s.activity > o.activity
+	}
+	return s.mod.After(o.mod)
 }
 
 func readSessionIndex(path string) (sessionIndex, error) {
@@ -143,7 +162,11 @@ func readSessionIndex(path string) (sessionIndex, error) {
 	if entry == nil {
 		return sessionIndex{}, fmt.Errorf("session index %s is not an object", path)
 	}
-	return sessionIndex{path: path, name: filepath.Base(path), cli: entry.CLISessionID, activity: entry.LastActivityAt}, nil
+	var mod time.Time
+	if info, err := os.Stat(path); err == nil {
+		mod = info.ModTime()
+	}
+	return sessionIndex{path: path, name: filepath.Base(path), cli: entry.CLISessionID, activity: entry.LastActivityAt, mod: mod}, nil
 }
 
 func (s sessionIndex) identity() string {

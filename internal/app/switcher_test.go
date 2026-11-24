@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -560,5 +562,45 @@ func TestImportSavesNewSignIn(t *testing.T) {
 	cache, err := tokenCacheOf(filepath.Join(s.profileDir("acc-new"), "config.json"))
 	if err != nil || cache != "djEwAAAA" {
 		t.Fatalf("saved token cache = %q, %v", cache, err)
+	}
+}
+
+// A switch waits for a fetch that is already going, then fetches again, so it
+// imports chats started since that fetch.
+func TestStartSSHFetchWaitsForRunningFetch(t *testing.T) {
+	sshTestEnv(t)
+	s := newSwitcher(t.TempDir())
+	write(t, filepath.Join(s.app().dir, "ssh_configs.json"), `{"configs":[{"sshHost":"box"}]}`)
+	calls := 0
+	sshTestStub(t, func(ctx context.Context, host, stdin string) ([]byte, error) {
+		calls++
+		return []byte(`{"session":"fresh","path":"/p/fresh.jsonl","entrypoint":"claude-desktop","cwd":"/w"}` + "\n"), nil
+	})
+
+	if s.startSSHFetch(time.Second)(); calls != 0 {
+		t.Fatal("fetched with the setting off")
+	}
+	s.st.SSHImport = true
+	s.sshMu.Lock()
+	wait := s.startSSHFetch(5 * time.Second)
+	time.Sleep(50 * time.Millisecond)
+	s.fetchSSH(context.Background()) // the background run skips while one is going
+	s.sshMu.Unlock()
+	wait()
+	if calls != 1 {
+		t.Fatalf("ssh called %d times, want 1", calls)
+	}
+	chats, err := loadSSHCache(s.sshCachePath())
+	if err != nil || len(chats) != 1 || chats[0].Session != "fresh" || chats[0].Host != "box" {
+		t.Fatalf("cache = %+v, %v", chats, err)
+	}
+
+	// A host that does not answer keeps the chats it had.
+	sshTestStub(t, func(ctx context.Context, host, stdin string) ([]byte, error) {
+		return nil, errors.New("no route to host")
+	})
+	s.startSSHFetch(time.Second)()
+	if chats, err := loadSSHCache(s.sshCachePath()); err != nil || len(chats) != 1 {
+		t.Fatalf("cache after a failed fetch = %+v, %v", chats, err)
 	}
 }

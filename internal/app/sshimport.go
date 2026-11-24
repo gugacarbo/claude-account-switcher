@@ -35,23 +35,46 @@ type sshChat struct {
 	Title      string `json:"title,omitempty"`
 	AITitle    string `json:"aiTitle,omitempty"`
 	Model      string `json:"model,omitempty"`
+	// Known marks a transcript the desktop already lists; it is only reported
+	// for its Ancestors.
+	Known bool `json:"known,omitempty"`
+	// Ancestors are the sessions this transcript continues, from its
+	// derived-from records: /clear, a fork or a compaction starts a new
+	// transcript and leaves the old one behind.
+	Ancestors []string `json:"ancestors,omitempty"`
 }
 
 // sshRemoteScript runs on the server with python3. It prints one JSON object
-// per transcript that is not in KNOWN, which the caller prefixes.
+// per transcript that is not in KNOWN, which the caller prefixes. A transcript
+// in KNOWN is only read for the sessions it continues, and printed when it has any.
 const sshRemoteScript = `import glob, json, os
+def ancestors(entry, own, found):
+    sessions = entry.get("sessions")
+    if entry.get("type") != "derived-from" or not isinstance(sessions, list):
+        return
+    for item in sessions:
+        if isinstance(item, dict):
+            for key in ("id", "started"):
+                value = item.get(key)
+                if isinstance(value, str) and value != own and value not in found:
+                    found.append(value)
 for path in sorted(glob.glob(os.path.expanduser("~/.claude/projects/*/*.jsonl"))):
     info = {"path": path, "session": os.path.basename(path)[:-6]}
-    if info["session"] in KNOWN:
-        continue
+    known = info["session"] in KNOWN
+    found = []
     try:
         with open(path, encoding="utf-8", errors="replace") as stream:
             for line in stream:
+                if known and '"derived-from"' not in line:
+                    continue
                 try:
                     entry = json.loads(line)
                 except ValueError:
                     continue
                 if not isinstance(entry, dict):
+                    continue
+                ancestors(entry, info["session"], found)
+                if known:
                     continue
                 stamp = entry.get("timestamp")
                 if isinstance(stamp, str):
@@ -69,6 +92,12 @@ for path in sorted(glob.glob(os.path.expanduser("~/.claude/projects/*/*.jsonl"))
                     info["model"] = message["model"]
     except OSError:
         continue
+    if found:
+        info["ancestors"] = found
+    if known:
+        if not found:
+            continue
+        info = {"path": path, "session": info["session"], "known": True, "ancestors": found}
     print(json.dumps(info))
 `
 
@@ -176,12 +205,15 @@ func knownSSHSessions(sessionsRoot string) (known, deleted map[string]bool) {
 }
 
 // fetchSSHChats scans every SSH host in parallel for transcripts the desktop
-// does not list yet. Failing hosts are logged and skipped. A session seen on
-// several hosts comes from the first host in sshHosts order.
-func fetchSSHChats(ctx context.Context, userData, sessionsRoot string) []sshChat {
+// does not list yet. A session seen on several hosts comes from the first host
+// in sshHosts order. A transcript that another one continues is left out: the
+// desktop shows a chat once, by its latest session. Failing hosts are logged
+// and returned, so the caller can keep what it knew about them.
+func fetchSSHChats(ctx context.Context, userData, sessionsRoot string) (chats []sshChat, failed map[string]bool) {
+	failed = map[string]bool{}
 	hosts := sshHosts(userData, sessionsRoot)
 	if len(hosts) == 0 {
-		return nil
+		return nil, failed
 	}
 	known, deleted := knownSSHSessions(sessionsRoot)
 	ids := make([]string, 0, len(known))
@@ -191,11 +223,12 @@ func fetchSSHChats(ctx context.Context, userData, sessionsRoot string) []sshChat
 	sort.Strings(ids)
 	idsJSON, err := json.Marshal(ids)
 	if err != nil {
-		return nil
+		return nil, failed
 	}
 	stdin := "KNOWN = set(" + string(idsJSON) + ")\n" + sshRemoteScript
 
 	results := make([][]sshChat, len(hosts))
+	errs := make([]error, len(hosts))
 	var wg sync.WaitGroup
 	for i, host := range hosts {
 		wg.Add(1)
@@ -206,6 +239,7 @@ func fetchSSHChats(ctx context.Context, userData, sessionsRoot string) []sshChat
 			out, err := runSSH(hctx, host, stdin)
 			if err != nil {
 				log.Printf("ssh %s: %v", host, err)
+				errs[i] = err
 				return
 			}
 			results[i] = parseSSHChats(host, out)
@@ -213,20 +247,49 @@ func fetchSSHChats(ctx context.Context, userData, sessionsRoot string) []sshChat
 	}
 	wg.Wait()
 
+	superseded := map[string]bool{}
+	for i, group := range results {
+		if errs[i] != nil {
+			failed[hosts[i]] = true
+		}
+		for _, c := range group {
+			for _, id := range c.Ancestors {
+				superseded[id] = true
+			}
+		}
+	}
 	seen := map[string]bool{}
-	var chats []sshChat
 	for _, group := range results {
 		for _, c := range group {
-			if c.Entrypoint != "claude-desktop" || c.Session == "" ||
-				known[c.Session] || deleted[c.Session] || seen[c.Session] {
+			if c.Known || c.Entrypoint != "claude-desktop" || c.Session == "" ||
+				known[c.Session] || deleted[c.Session] || superseded[c.Session] || seen[c.Session] {
 				continue
 			}
 			seen[c.Session] = true
+			c.Ancestors = nil
 			chats = append(chats, c)
 		}
 	}
 	sort.Slice(chats, func(i, j int) bool { return chats[i].Session < chats[j].Session })
-	return chats
+	return chats, failed
+}
+
+// keepFailedHosts adds the cached chats of hosts that did not answer to
+// fresh, so a host that is offline for a moment does not lose its chats.
+func keepFailedHosts(fresh, cached []sshChat, failed map[string]bool) []sshChat {
+	seen := map[string]bool{}
+	for _, c := range fresh {
+		seen[c.Session] = true
+	}
+	merged := fresh
+	for _, c := range cached {
+		if failed[c.Host] && !seen[c.Session] {
+			seen[c.Session] = true
+			merged = append(merged, c)
+		}
+	}
+	sort.Slice(merged, func(i, j int) bool { return merged[i].Session < merged[j].Session })
+	return merged
 }
 
 // parseSSHChats reads the JSON lines printed by sshRemoteScript.
