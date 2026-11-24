@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -160,8 +161,11 @@ func sshHosts(userData, sessionsRoot string) []string {
 }
 
 // knownSSHSessions returns the CLI session IDs of every chat entry in any
-// account, and the ones the user deleted. A deleted_<x> marker is matched
-// against entries by local ID, and x itself is also treated as deleted.
+// account, and the ones the user deleted. A chat's earlier CLI sessions count
+// as known too: the app starts a new one for a chat after /clear or when it
+// spawns the remote process again, which Remote Control does often, and keeps
+// the old ones in the entry. A deleted_<x> marker is matched against entries
+// by local ID, and x itself is also treated as deleted.
 func knownSSHSessions(sessionsRoot string) (known, deleted map[string]bool) {
 	known = map[string]bool{}
 	deleted = map[string]bool{}
@@ -182,10 +186,14 @@ func knownSSHSessions(sessionsRoot string) (known, deleted map[string]bool) {
 			case strings.HasPrefix(name, "deleted_"):
 				deletedLocal = append(deletedLocal, strings.TrimPrefix(name, "deleted_"))
 			case strings.HasPrefix(name, "local_") && strings.HasSuffix(name, ".json"):
-				entry, err := readSessionIndex(filepath.Join(dir, name))
+				path := filepath.Join(dir, name)
+				entry, err := readSessionIndex(path)
 				if err != nil {
-					log.Printf("Skip session index %s: %v", filepath.Join(dir, name), err)
+					log.Printf("Skip session index %s: %v", path, err)
 					continue
+				}
+				for _, id := range priorCLISessions(path) {
+					known[id] = true
 				}
 				if entry.cli == "" {
 					continue
@@ -202,6 +210,90 @@ func knownSSHSessions(sessionsRoot string) (known, deleted map[string]bool) {
 		}
 	}
 	return known, deleted
+}
+
+// priorCLISessions returns the CLI sessions a chat entry used before its
+// current one. A file that cannot be read has none.
+func priorCLISessions(path string) []string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var entry struct {
+		CLI          string            `json:"cliSessionId"`
+		PriorRemote  []json.RawMessage `json:"priorRemoteCliSessionIds"`
+		Prior        []json.RawMessage `json:"priorCliSessionIds"`
+		LeftSince    []json.RawMessage `json:"cliSessionIdsLeftSinceAnswer"`
+		LeftAt       map[string]any    `json:"priorCliSessionLeftAt"`
+		LastAnswered string            `json:"lastAssistantCliSessionId"`
+	}
+	if json.Unmarshal(data, &entry) != nil {
+		return nil
+	}
+	var ids []string
+	add := func(id string) {
+		if id != "" && id != entry.CLI {
+			ids = append(ids, id)
+		}
+	}
+	for _, list := range [][]json.RawMessage{entry.PriorRemote, entry.Prior, entry.LeftSince} {
+		for _, raw := range list {
+			var id string
+			if json.Unmarshal(raw, &id) == nil {
+				add(id)
+			}
+		}
+	}
+	for id := range entry.LeftAt {
+		add(id)
+	}
+	add(entry.LastAnswered)
+	sort.Strings(ids)
+	return ids
+}
+
+// removeSupersededSSHChats moves out the entries named after a CLI session
+// that another chat has since left behind. The SSH import wrote them, and the
+// app adopts such transcripts the same way; either way it lists the chat
+// twice, and the old copy cannot go on. Entries the app made for a chat have a
+// local ID of their own and are never moved. They go to backupDir, keeping
+// their account folders. Returns the folders it changed.
+func removeSupersededSSHChats(sessionsRoot, backupDir string) ([]string, error) {
+	paths, _ := filepath.Glob(filepath.Join(sessionsRoot, "*", "*", "local_*.json"))
+	prior := map[string]bool{}
+	for _, p := range paths {
+		for _, id := range priorCLISessions(p) {
+			prior[id] = true
+		}
+	}
+	var changed []string
+	for _, p := range paths {
+		entry, err := readSessionIndex(p)
+		if err != nil || entry.cli == "" || entry.localID() != entry.cli || !prior[entry.cli] {
+			continue
+		}
+		if o, err := readObject(p); err != nil {
+			continue
+		} else if _, ok := o.get("sshConfig"); !ok {
+			continue
+		}
+		rel, err := filepath.Rel(sessionsRoot, p)
+		if err != nil {
+			return changed, err
+		}
+		dst := filepath.Join(backupDir, rel)
+		if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
+			return changed, err
+		}
+		if err := os.Rename(p, dst); err != nil {
+			return changed, err
+		}
+		log.Printf("Moved %s to %s: an earlier session of another chat", rel, backupDir)
+		if dir := filepath.Dir(p); !slices.Contains(changed, dir) {
+			changed = append(changed, dir)
+		}
+	}
+	return changed, nil
 }
 
 // fetchSSHChats scans every SSH host in parallel for transcripts the desktop

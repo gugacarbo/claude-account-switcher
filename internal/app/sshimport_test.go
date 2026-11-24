@@ -370,3 +370,67 @@ func TestWriteSSHChatsRejectsUnsafeSession(t *testing.T) {
 		t.Fatalf("files = %v", files)
 	}
 }
+
+// The app starts a new CLI session for a chat after /clear or when it spawns
+// the remote process again, and keeps the old ones in the entry. Importing an
+// old one would list the chat twice.
+func TestKnownSSHSessionsIncludesPriorSessions(t *testing.T) {
+	root := t.TempDir()
+	sshTestWrite(t, filepath.Join(root, "a", "oa", "local_x.json"), `{"cliSessionId":"now",
+		"priorRemoteCliSessionIds":["remote-1","remote-2"],"priorCliSessionIds":["cleared"],
+		"cliSessionIdsLeftSinceAnswer":["left"],"priorCliSessionLeftAt":{"left-at":1},
+		"lastAssistantCliSessionId":"answered"}`)
+	known, _ := knownSSHSessions(root)
+	for _, id := range []string{"now", "remote-1", "remote-2", "cleared", "left", "left-at", "answered"} {
+		if !known[id] {
+			t.Errorf("%s not known", id)
+		}
+	}
+}
+
+func TestRemoveSupersededSSHChats(t *testing.T) {
+	root := t.TempDir()
+	backup := t.TempDir()
+	// The chat the app shows, now on CLI session "now", formerly "old".
+	sshTestWrite(t, filepath.Join(root, "a", "oa", "local_chat.json"), `{"cliSessionId":"now","priorRemoteCliSessionIds":["old","app-made"]}`)
+	stale := []string{filepath.Join("a", "oa", "local_old.json"), filepath.Join("b", "ob", "local_old.json")}
+	for _, rel := range stale {
+		sshTestWrite(t, filepath.Join(root, rel), `{"sessionId":"local_old","cliSessionId":"old","sshConfig":{"sshHost":"box"}}`)
+	}
+	kept := map[string]string{
+		// The app's own entry has a local ID of its own.
+		filepath.Join("b", "ob", "local_app.json"): `{"cliSessionId":"app-made","sshConfig":{"sshHost":"box"}}`,
+		// Not an SSH chat.
+		filepath.Join("b", "ob", "local_old.json.bak"): `{}`,
+		// Nobody left this session behind.
+		filepath.Join("b", "ob", "local_fresh.json"): `{"cliSessionId":"fresh","sshConfig":{"sshHost":"box"}}`,
+	}
+	for rel, data := range kept {
+		sshTestWrite(t, filepath.Join(root, rel), data)
+	}
+
+	changed, err := removeSupersededSSHChats(root, backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{filepath.Join(root, "a", "oa"), filepath.Join(root, "b", "ob")}
+	if !reflect.DeepEqual(changed, want) {
+		t.Fatalf("changed = %v, want %v", changed, want)
+	}
+	for _, rel := range stale {
+		if _, err := os.Stat(filepath.Join(root, rel)); !os.IsNotExist(err) {
+			t.Fatalf("%s still listed", rel)
+		}
+		if _, err := os.Stat(filepath.Join(backup, rel)); err != nil {
+			t.Fatalf("%s not kept in the backup: %v", rel, err)
+		}
+	}
+	for rel := range kept {
+		if _, err := os.Stat(filepath.Join(root, rel)); err != nil {
+			t.Fatalf("%s moved: %v", rel, err)
+		}
+	}
+	if changed, err := removeSupersededSSHChats(root, backup); err != nil || len(changed) != 0 {
+		t.Fatalf("second run = %v, %v; want nothing to do", changed, err)
+	}
+}

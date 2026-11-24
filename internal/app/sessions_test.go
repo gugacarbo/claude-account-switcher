@@ -345,3 +345,39 @@ func TestTakeCutChatsSameAccount(t *testing.T) {
 		}
 	}
 }
+
+// The app starts from archived-sessions.idx without opening archived entries,
+// so the list has to follow archiving done in another account.
+func TestSyncArchivedIndex(t *testing.T) {
+	dir := t.TempDir()
+	idx := filepath.Join(dir, archivedIndexName)
+	write(t, filepath.Join(dir, "local_b.json"), `{"isArchived":true}`)
+	write(t, filepath.Join(dir, "local_a.json"), `{"isArchived":true}`)
+	write(t, filepath.Join(dir, "local_open.json"), `{"isArchived":false}`)
+	write(t, filepath.Join(dir, "local_broken.json"), `{broken`)
+	write(t, filepath.Join(dir, "local_broken2.json"), `{broken`)
+
+	if err := syncArchivedIndex(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(idx); !os.IsNotExist(err) {
+		t.Fatal("created a list the app had not made")
+	}
+
+	write(t, idx, `{"v":1,"archived":["local_open","local_broken","local_gone"],"future":true}`)
+	for range 2 {
+		if err := syncArchivedIndex(dir); err != nil {
+			t.Fatal(err)
+		}
+		want := `{"archived":["local_a","local_b","local_broken"],"future":true,"v":1}`
+		if got := read(t, idx); got != want {
+			t.Fatalf("list = %s, want %s", got, want)
+		}
+	}
+
+	unknown := `{"v":2,"archived":[]}`
+	write(t, idx, unknown)
+	if err := syncArchivedIndex(dir); err != nil || read(t, idx) != unknown {
+		t.Fatalf("rewrote a list of unknown version: %v", err)
+	}
+}

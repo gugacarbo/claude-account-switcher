@@ -3,11 +3,13 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -131,6 +133,71 @@ func syncSessions(root, account, org string) (int, error) {
 		byIdentity[s.identity()] = s.name
 	}
 	return written, nil
+}
+
+// archivedIndexName is the app's list of a folder's archived chats. It reads
+// the list to start without opening each archived entry, so it has to match
+// the entries: a chat archived in another account would show up again, and
+// one taken back out would stay hidden.
+const archivedIndexName = "archived-sessions.idx"
+
+// syncArchivedIndex rewrites dir's archived list from its entries. A missing
+// list is left for the app to build, and a version it does not know is left alone.
+func syncArchivedIndex(dir string) error {
+	path := filepath.Join(dir, archivedIndexName)
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var idx map[string]json.RawMessage
+	if err := json.Unmarshal(data, &idx); err != nil {
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+	if string(idx["v"]) != "1" {
+		log.Printf("Leave %s alone: unknown version %s", path, idx["v"])
+		return nil
+	}
+	var old []string
+	_ = json.Unmarshal(idx["archived"], &old)
+
+	paths, err := filepath.Glob(filepath.Join(dir, "local_*.json"))
+	if err != nil {
+		return err
+	}
+	archived := []string{}
+	for _, p := range paths {
+		var entry struct {
+			IsArchived bool `json:"isArchived"`
+		}
+		raw, err := os.ReadFile(p)
+		if err != nil || json.Unmarshal(raw, &entry) != nil {
+			// The app keeps what it knew about an entry it cannot read.
+			if id := strings.TrimSuffix(filepath.Base(p), ".json"); slices.Contains(old, id) {
+				archived = append(archived, id)
+			}
+			continue
+		}
+		if entry.IsArchived {
+			archived = append(archived, strings.TrimSuffix(filepath.Base(p), ".json"))
+		}
+	}
+	sort.Strings(archived)
+	if slices.Equal(archived, old) {
+		return nil
+	}
+	list, err := json.Marshal(archived)
+	if err != nil {
+		return err
+	}
+	idx["archived"] = list
+	out, err := json.Marshal(idx)
+	if err != nil {
+		return err
+	}
+	return writeFileAtomic(path, out)
 }
 
 type sessionIndex struct {

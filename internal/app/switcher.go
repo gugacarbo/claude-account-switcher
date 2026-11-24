@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -575,6 +576,7 @@ func (s *switcher) switchTo(uuid string, cause switchCause) error {
 		s.importProjects(target)
 		fetched()
 		s.importSSHChats(target)
+		s.tidyChats(target)
 		return err
 	}, confirmed...)
 	if err == nil {
@@ -640,6 +642,7 @@ func (s *switcher) importInto(active string) error {
 	log.Printf("%d chats imported into %s", n, a.label())
 	s.importProjects(a)
 	s.importSSHChats(a)
+	s.tidyChats(a)
 	return err
 }
 
@@ -756,6 +759,29 @@ func (s *switcher) importSSHChats(a *Account) {
 		return
 	}
 	log.Printf("%d SSH chats imported into %s", n, a.label())
+}
+
+// supersededDir keeps the chat entries tidyChats moved out, apart from the
+// backups, which are pruned.
+func (s *switcher) supersededDir() string { return filepath.Join(s.dir, "superseded-chats") }
+
+// tidyChats runs after the chats were copied into a, while Claude is closed.
+// It moves out entries of CLI sessions another chat has left behind, and
+// brings the app's archived lists in line with the entries. A failure only
+// costs the tidying, so it is logged and the switch goes on.
+func (s *switcher) tidyChats(a *Account) {
+	root := s.app().sessionsDir()
+	changed, err := removeSupersededSSHChats(root, s.supersededDir())
+	if err != nil {
+		log.Printf("superseded chats not moved: %v", err)
+	}
+	dirs := append(changed, filepath.Join(root, a.UUID, a.Org))
+	slices.Sort(dirs)
+	for _, dir := range slices.Compact(dirs) {
+		if err := syncArchivedIndex(dir); err != nil {
+			log.Printf("archived list of %s not updated: %v", dir, err)
+		}
+	}
 }
 
 func (s *switcher) setAuto(on bool) {
