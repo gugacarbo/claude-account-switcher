@@ -17,8 +17,8 @@ func TestUIContract(t *testing.T) {
 	}
 	re := regexp.MustCompile(`RegisterBindingMethodID\(\(\*UIService\)\.(\w+), (\d+)\)`)
 	matches := re.FindAllStringSubmatch(string(bindings), -1)
-	if len(matches) != 14 {
-		t.Fatalf("expected 14 stable commands, got %d", len(matches))
+	if len(matches) != 15 {
+		t.Fatalf("expected 15 stable commands, got %d", len(matches))
 	}
 	for _, m := range matches {
 		entry := regexp.MustCompile(`(?m)^\s*` + m[1] + `:\s*` + m[2] + `,`)

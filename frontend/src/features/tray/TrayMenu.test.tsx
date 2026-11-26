@@ -76,6 +76,7 @@ function setup(
     pending: false,
     error: "",
     onSwitch: vi.fn(),
+    onRefresh: vi.fn(),
     onOpenPanel: vi.fn(),
     onQuit: vi.fn(),
     onEscape: vi.fn(),

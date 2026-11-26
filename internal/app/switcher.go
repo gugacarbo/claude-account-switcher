@@ -128,6 +128,7 @@ type switcher struct {
 	active   string
 	busy     atomic.Bool
 	sshMu    sync.Mutex
+	usageMu  sync.Mutex
 	status   string
 	addingAt time.Time
 	// signedInAt is when the switcher saw Claude signed in with another
@@ -215,9 +216,40 @@ func (s *switcher) refresh(ctx context.Context) {
 // check fetches the usage that is due and saves it. It never restarts Claude,
 // so -status can use it; the switch or import it finds due is returned instead.
 func (s *switcher) check(ctx context.Context) (string, func() error) {
+	if !s.usageMu.TryLock() {
+		return "", nil
+	}
+	defer s.usageMu.Unlock()
 	if s.busy.Load() {
 		return "", nil
 	}
+	active := s.detectUsageAccount()
+	added, _ := s.collectUsage(ctx, active, false)
+
+	lastChat := lastChatWrite(s.app().sessionsDir())
+	s.mu.Lock()
+	adding := !s.addingAt.IsZero()
+	if added && adding {
+		s.addingAt = time.Time{}
+	} else if adding && time.Since(s.addingAt) > 15*time.Minute {
+		s.addingAt, s.status = time.Time{}, ""
+	}
+	s.saveState()
+	target, cause := s.autoTarget(desktopRunning(), lastChat, time.Now())
+	s.mu.Unlock()
+	s.onChange()
+
+	switch {
+	case added && adding:
+		// A fresh sign-in: restart once so the chats of the other accounts show up.
+		return tr("Importing chats", "导入聊天"), s.importChats
+	case target != nil:
+		return tr("Auto switch", "自动切换"), func() error { return s.switchTo(target.UUID, cause) }
+	}
+	return "", nil
+}
+
+func (s *switcher) detectUsageAccount() string {
 	active, err := s.app().activeAccount()
 	if err != nil {
 		log.Printf("read app config: %v", err)
@@ -230,13 +262,21 @@ func (s *switcher) check(ctx context.Context) (string, func() error) {
 	if exe != "" {
 		s.st.AppExe = exe
 	}
+	s.mu.Unlock()
+	return active
+}
+
+// collectUsage shares rate limiting and persistence updates between scheduled
+// reads and the on-demand action. Callers hold usageMu.
+func (s *switcher) collectUsage(ctx context.Context, active string, manual bool) (added, incomplete bool) {
+	s.mu.Lock()
 	type job struct {
 		uuid string
 		new  bool
 	}
 	now := time.Now()
 	var jobs []job
-	if active != "" && s.account(active) == nil && now.After(s.backoff[active]) {
+	if !manual && active != "" && s.account(active) == nil && now.After(s.backoff[active]) {
 		jobs = append(jobs, job{active, true})
 	}
 	for _, a := range s.st.Accounts {
@@ -247,15 +287,19 @@ func (s *switcher) check(ctx context.Context) (string, func() error) {
 				every = hotEvery
 			}
 		}
-		due := a.Usage == nil || now.Sub(a.Usage.CheckedAt) >= every-5*time.Second
+		due := manual || a.Usage == nil || now.Sub(a.Usage.CheckedAt) >= every-5*time.Second
 		if due && now.After(s.backoff[a.UUID]) {
 			jobs = append(jobs, job{a.UUID, false})
+		} else if manual {
+			incomplete = true
 		}
 	}
 	s.mu.Unlock()
 
-	added := false
 	for _, j := range jobs {
+		if ctx.Err() != nil {
+			return added, true
+		}
 		token, err := s.tokenFor(j.uuid, active)
 		var p profile
 		var u *Usage
@@ -266,6 +310,7 @@ func (s *switcher) check(ctx context.Context) (string, func() error) {
 			u, err = fetchUsage(ctx, token)
 		}
 
+		incomplete = incomplete || err != nil
 		s.mu.Lock()
 		var limited *rateLimited
 		if errors.As(err, &limited) {
@@ -275,7 +320,7 @@ func (s *switcher) check(ctx context.Context) (string, func() error) {
 				wait = min(activeEvery<<(s.strikes[j.uuid]-1), maxBackoff)
 			}
 			s.backoff[j.uuid] = time.Now().Add(wait)
-			log.Printf("usage %s: rate limited, next try in %s", j.uuid[:8], wait)
+			log.Printf("usage %s: rate limited, next try in %s", j.uuid[:min(len(j.uuid), 8)], wait)
 		} else if err == nil {
 			delete(s.strikes, j.uuid)
 		}
@@ -301,27 +346,7 @@ func (s *switcher) check(ctx context.Context) (string, func() error) {
 		s.mu.Unlock()
 	}
 
-	lastChat := lastChatWrite(s.app().sessionsDir())
-	s.mu.Lock()
-	adding := !s.addingAt.IsZero()
-	if added && adding {
-		s.addingAt = time.Time{}
-	} else if adding && time.Since(s.addingAt) > 15*time.Minute {
-		s.addingAt, s.status = time.Time{}, ""
-	}
-	s.saveState()
-	target, cause := s.autoTarget(desktopRunning(), lastChat, time.Now())
-	s.mu.Unlock()
-	s.onChange()
-
-	switch {
-	case added && adding:
-		// A fresh sign-in: restart once so the chats of the other accounts show up.
-		return tr("Importing chats", "导入聊天"), s.importChats
-	case target != nil:
-		return tr("Auto switch", "自动切换"), func() error { return s.switchTo(target.UUID, cause) }
-	}
-	return "", nil
+	return added, incomplete
 }
 
 // noticeSignIn records when Claude came up signed in with an account it did

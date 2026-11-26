@@ -114,6 +114,35 @@ func (u *UIService) launch(name string, f func() error) error {
 	go u.s.runClaimed(name, f)
 	return nil
 }
+
+// RefreshUsage only reads usage for saved accounts. Unlike a scheduled check,
+// it does not import new accounts or consider any automatic switch.
+func (u *UIService) RefreshUsage() error {
+	s := u.s
+	ongoing := tr("An operation is already running.", "已有操作正在进行。")
+	if updating.Load() || !s.usageMu.TryLock() {
+		return errors.New(ongoing)
+	}
+	defer s.usageMu.Unlock()
+	if !s.busy.CompareAndSwap(false, true) {
+		return errors.New(ongoing)
+	}
+	defer func() {
+		s.busy.Store(false)
+		s.onChange()
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	active := s.detectUsageAccount()
+	_, incomplete := s.collectUsage(ctx, active, true)
+	s.mu.Lock()
+	s.saveState()
+	s.mu.Unlock()
+	if incomplete {
+		return errors.New(tr("Some readings could not be refreshed. Try again later.", "部分用量未能刷新，请稍后重试。"))
+	}
+	return nil
+}
 func (u *UIService) AddAccount() error {
 	return u.launch(tr("Add account", "添加账号"), u.s.addAccount)
 }

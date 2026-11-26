@@ -238,6 +238,63 @@ describe("shared desktop UI", () => {
     );
   });
 
+  it("refreshes tray usage without switching accounts or closing the menu", async () => {
+    let finish!: () => void;
+    const api = bridge();
+    vi.mocked(api.call).mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<App bridge={api} view="menu" />);
+    const refresh = await screen.findByRole("menuitem", {
+      name: "Refresh usage",
+    });
+    expect(screen.getByRole("heading", { name: "Accounts" })).toBeVisible();
+    fireEvent.click(refresh);
+    expect(refresh).toBeDisabled();
+    const profile = screen.getByRole("menuitemradio", { name: /Lin/ });
+    expect(profile).toBeEnabled();
+    expect(profile).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(profile);
+    expect(screen.getByRole("status").closest("header")).not.toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Refreshing usage…");
+    expect(api.call).toHaveBeenCalledExactlyOnceWith("RefreshUsage");
+    const [active, ...rest] = state.accounts;
+    vi.mocked(api.state).mockResolvedValue({
+      ...state,
+      accounts: [
+        { ...active, usage: { ...active.usage!, session: 73 } },
+        ...rest,
+      ],
+    });
+    await act(async () => finish());
+    expect(
+      screen.getByRole("progressbar", { name: "5-hour usage" }),
+    ).toHaveAttribute("aria-valuenow", "73");
+    expect(
+      screen.getByRole("menuitemradio", { checked: true }),
+    ).toHaveTextContent("Ada");
+    expect(refresh).toBeEnabled();
+  });
+
+  it("keeps the last readings visible when a tray refresh is partial", async () => {
+    const api = bridge();
+    vi.mocked(api.call).mockRejectedValue(
+      new Error("Some readings could not be refreshed."),
+    );
+    render(<App bridge={api} view="menu" />);
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Refresh usage" }),
+    );
+    const warning = await screen.findByRole("alert");
+    expect(warning.closest("header")).not.toBeNull();
+    expect(warning).toHaveTextContent("Some readings could not be refreshed.");
+    expect(
+      screen.getByRole("progressbar", { name: "5-hour usage" }),
+    ).toHaveAttribute("aria-valuenow", "42");
+  });
+
   it("renders the tray dropdown from signed state and forwards its two commands", async () => {
     const api = bridge();
     render(<App bridge={api} view="menu" />);

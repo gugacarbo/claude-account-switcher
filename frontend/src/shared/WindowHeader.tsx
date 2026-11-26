@@ -6,7 +6,9 @@ import type { T } from "./i18n";
 interface WindowHeaderProps {
   title: string;
   t: T;
-  onClose: () => void;
+  onClose?: () => void;
+  compact?: boolean;
+  actions?: ReactNode;
   onBack?: () => void;
   children?: ReactNode;
 }
@@ -19,15 +21,21 @@ export function WindowHeader({
   title,
   t,
   onClose,
+  compact = false,
+  actions,
   onBack,
   children,
 }: WindowHeaderProps) {
   return (
-    <header className="window-header">
+    <header
+      className={
+        compact ? "window-header window-header-compact" : "window-header"
+      }
+    >
       <div
         className="window-header-bar"
-        data-testid="window-drag"
-        style={dragStyle}
+        data-testid={compact ? undefined : "window-drag"}
+        style={compact ? undefined : dragStyle}
       >
         <h1 className="window-header-title">{title}</h1>
       </div>
@@ -43,15 +51,18 @@ export function WindowHeader({
             <BackIcon />
           </Button>
         ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          className="window-header-button"
-          aria-label={t("Close", "关闭")}
-          onClick={onClose}
-        >
-          <CloseIcon />
-        </Button>
+        {onClose ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="window-header-button"
+            aria-label={t("Close", "关闭")}
+            onClick={onClose}
+          >
+            <CloseIcon />
+          </Button>
+        ) : null}
+        {actions}
       </div>
       {children}
     </header>

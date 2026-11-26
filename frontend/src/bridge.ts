@@ -60,6 +60,7 @@ const methods: Record<string, number> = {
   AnswerResume: 12,
   PauseResume: 13,
   CancelResume: 14,
+  RefreshUsage: 15,
 };
 // Legacy Go paths emit a bare section name ("settings" | "threshold") on the
 // "navigate" event. The Wails SDK wraps payloads in a WailsEvent (.data), so

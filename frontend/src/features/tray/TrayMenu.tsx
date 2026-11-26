@@ -1,7 +1,10 @@
 import { useRef, useState } from "react";
 import type { Account, UIState } from "../../bridge";
+import { Button } from "../../components/ui/button";
 import { Progress } from "../../components/ui/progress";
+import { RefreshIcon } from "../../shared/Icons";
 import type { T } from "../../shared/i18n";
+import { WindowHeader } from "../../shared/WindowHeader";
 
 function remainingTime(
   reset: string,
@@ -73,6 +76,9 @@ export function TrayMenu({
   state,
   lang,
   pending,
+  refreshing = false,
+  refreshError = "",
+  onRefresh,
   error,
   onSwitch,
   onOpenPanel,
@@ -82,6 +88,9 @@ export function TrayMenu({
   state: UIState | null;
   lang: string;
   pending: boolean;
+  refreshing?: boolean;
+  refreshError?: string;
+  onRefresh: () => void;
   error: string;
   onSwitch: (id: string) => void;
   onOpenPanel: () => void;
@@ -94,13 +103,15 @@ export function TrayMenu({
   const accounts = [...(state?.accounts ?? [])].sort(
     (a, b) => Number(b.active) - Number(a.active),
   );
-  const disabled = pending || !!state?.busy;
+  const disabled = pending || (!refreshing && !!state?.busy);
 
   // Roving focus for real keyboard navigation across the menu.
+  const refreshRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [cursor, setCursor] = useState(-1);
 
-  const loading = state === null;
+  const refreshLabel = t("Refresh usage", "刷新用量");
+  const progressLabel = t("Refreshing usage…", "正在刷新用量…");
 
   // Roving focus skips disabled entries (the active account and, while busy,
   // every row), wrapping around the list.
@@ -148,7 +159,11 @@ export function TrayMenu({
         );
         return move(
           step(
-            focused >= 0 ? focused : cursor,
+            focused >= 0
+              ? focused
+              : document.activeElement === refreshRef.current
+                ? -1
+                : cursor,
             event.key === "ArrowDown" ? 1 : -1,
           ),
         );
@@ -176,6 +191,44 @@ export function TrayMenu({
       aria-label={t("Application menu", "应用菜单")}
       onKeyDown={onKeyDown}
     >
+      <WindowHeader
+        compact
+        title={t("Accounts", "账号")}
+        t={t}
+        actions={
+          <Button
+            type="button"
+            role="menuitem"
+            ref={refreshRef}
+            variant="ghost"
+            className="window-header-button tray-refresh-button"
+            aria-label={refreshLabel}
+            title={refreshError || (refreshing ? progressLabel : refreshLabel)}
+            aria-busy={refreshing}
+            data-warning={refreshError ? "true" : undefined}
+            disabled={disabled || refreshing || accounts.length === 0}
+            onClick={onRefresh}
+          >
+            <RefreshIcon />
+            {refreshError ? (
+              <span className="tray-refresh-warning" aria-hidden="true">
+                !
+              </span>
+            ) : null}
+          </Button>
+        }
+      >
+        {refreshing ? (
+          <span className="sr-only" role="status">
+            {progressLabel}
+          </span>
+        ) : null}
+        {refreshError ? (
+          <span className="sr-only" role="alert">
+            {refreshError}
+          </span>
+        ) : null}
+      </WindowHeader>
       {state === null ? (
         <p role="status" className="tray-menu-status">
           {t("Connecting to your accounts…", "正在连接账号…")}
@@ -187,7 +240,7 @@ export function TrayMenu({
               {error}
             </p>
           ) : null}
-          {state.busy ? (
+          {state.busy && !refreshing ? (
             <p role="status" className="tray-menu-status">
               {t("Working on it…", "正在处理…")}
             </p>
@@ -213,7 +266,12 @@ export function TrayMenu({
                     className={`tray-account ${account.active ? "active" : ""}`}
                     disabled={account.active || disabled}
                     onFocus={() => setCursor(index)}
-                    onClick={() => onSwitch(account.id)}
+                    aria-disabled={
+                      refreshing && !account.active ? true : undefined
+                    }
+                    onClick={() => {
+                      if (!refreshing) onSwitch(account.id);
+                    }}
                   >
                     <span className="tray-account-head">
                       <strong>{label}</strong>
@@ -282,6 +340,7 @@ export function TrayMenu({
             type="button"
             role="menuitem"
             className="tray-menu-item"
+            disabled={refreshing}
             onClick={onQuit}
           >
             {t("Quit", "退出")}

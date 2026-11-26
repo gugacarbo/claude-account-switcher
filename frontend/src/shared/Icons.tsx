@@ -63,3 +63,24 @@ export function SettingsIcon({ size = 16 }: IconProps) {
     </svg>
   );
 }
+
+export function RefreshIcon({ size = 16 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M13.5 6A5.7 5.7 0 0 0 3.1 5L2 6.5M2 3v3.5h3.5m-3 3.5a5.7 5.7 0 0 0 10.4 1l1.1-1.5m0 3.5V9.5h-3.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

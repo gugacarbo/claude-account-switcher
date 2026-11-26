@@ -74,8 +74,8 @@ func TestTrayMenuWindowBehavesLikeADropdown(t *testing.T) {
 	if !opts.HideOnEscape {
 		t.Fatal("tray menu must close on escape")
 	}
-	if opts.Width != 340 || opts.Height != 96 {
-		t.Fatalf("empty tray menu must start compact at 340x96: got %dx%d", opts.Width, opts.Height)
+	if opts.Width != 340 || opts.Height != trayMenuHeight(0) {
+		t.Fatalf("empty tray menu must start at 340x%d: got %dx%d", trayMenuHeight(0), opts.Width, opts.Height)
 	}
 	if opts.URL != "/?view=menu" {
 		t.Fatalf("tray menu url is %q", opts.URL)
@@ -93,11 +93,11 @@ func TestTrayMenuWindowBehavesLikeADropdown(t *testing.T) {
 }
 
 func TestTrayMenuHeightFitsAccountsWithoutBlankSpace(t *testing.T) {
-	if got := trayMenuHeight(0); got != 96 {
-		t.Fatalf("empty menu height = %d, want 96", got)
+	if got := trayMenuHeight(0); got != 152 {
+		t.Fatalf("empty menu height = %d, want 152", got)
 	}
 	one := trayMenuHeight(1)
-	if one < 140 || one > 180 {
+	if one < 185 || one > 210 {
 		t.Fatalf("one-account menu height = %d, want compact content height", one)
 	}
 	if got := trayMenuHeight(3); got != one+2*72 {

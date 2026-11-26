@@ -34,6 +34,8 @@ export function App({
   const [state, setState] = useState<UIState | null>(null),
     [error, setError] = useState(""),
     [pending, setPending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
   const active: Screen | "resume" =
     view === "resume"
       ? "resume"
@@ -108,8 +110,7 @@ export function App({
     );
   }
   // The tray dropdown is its own small window: it renders from the same signed
-  // UIState and shares the pending/error handling, but without header or
-  // panel sections.
+  // UIState, but has its own compact header and account actions.
   if (view === "menu") {
     return (
       <TrayMenu
@@ -117,12 +118,31 @@ export function App({
         lang={state?.lang ?? "en"}
         pending={pending}
         error={error}
+        refreshing={refreshing}
+        refreshError={refreshError}
+        onRefresh={() => void refreshUsage()}
         onSwitch={(id) => void act("SwitchAccount", id)}
         onOpenPanel={() => void act("OpenWindow", "panel")}
         onQuit={() => void act("Quit")}
         onEscape={() => void act("CloseWindow", "menu").catch(() => {})}
       />
     );
+  }
+  async function refreshUsage() {
+    setRefreshing(true);
+    setRefreshError("");
+    try {
+      try {
+        await bridge.call("RefreshUsage");
+      } finally {
+        // A partial failure can still have saved readings for other accounts.
+        setState(await bridge.state());
+      }
+    } catch (e) {
+      setRefreshError(String((e as Error).message ?? e));
+    } finally {
+      setRefreshing(false);
+    }
   }
   async function act(method: string, ...args: unknown[]) {
     setPending(true);

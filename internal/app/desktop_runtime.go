@@ -80,9 +80,10 @@ type trayMenuWindow interface {
 
 func trayMenuHeight(accounts int) int {
 	if accounts == 0 {
-		return 96
+		return 152
 	}
-	return min(480, 84+accounts*72)
+	// Allow for the list's top and bottom margins as well as the account rows.
+	return min(480, 134+accounts*72)
 }
 
 func showPositionedTrayMenu(win trayMenuWindow, position func()) {
@@ -143,9 +144,22 @@ func runDesktop(s *switcher, lock net.Listener) {
 		}
 		panel.Show().Focus()
 	}
+	var traySurfaceStyled bool // accessed only on the UI thread
+	styleTraySurface := func() {
+		application.InvokeSync(func() {
+			if native := menuWin.NativeWindow(); native != nil && !traySurfaceStyled {
+				traySurfaceStyled = true
+				if err := makeTraySurfaceTransparent(native); err != nil {
+					log.Printf("style tray dropdown: %v", err)
+				}
+			}
+		})
+	}
 	showMenu := func() {
+		styleTraySurface()
 		menuWin.SetSize(340, trayMenuHeight(len(service.State().Accounts)))
 		showPositionedTrayMenu(menuWin, func() {
+			styleTraySurface() // GTK may create the native handle on Show.
 			// On Linux Wails stores the coordinates supplied by Activate or
 			// SecondaryActivate before invoking this handler. Do not query the
 			// live cursor: it may already have moved away from the tray icon.

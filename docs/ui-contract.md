@@ -51,7 +51,8 @@ regras de julgamento (reuso, densidade, acessibilidade) ficam para revisão.
 - Dimensões extraídas de `internal/app/desktop_runtime.go`:
   - Telas: 420×640 inicial, mínimo 360×360.
   - Dropdown de tray: 340 de largura, altura calculada pelo número de contas
-    (`menuHeight`, até 6 linhas antes de rolar), mínimo 180×96.
+    (`trayMenuHeight`, lista rolável quando necessário), mínimo 300×96.
+     O cabeçalho compacto reutiliza `WindowHeader` sem arraste nem fechar.
 - A matriz visual global do Playwright é 520×720, en-US, claro
   (`frontend/playwright.config.ts`); stories pontuais escuras/estreitas são
   complemento, não matriz completa.
