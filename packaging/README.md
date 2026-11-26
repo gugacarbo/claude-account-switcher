@@ -3,7 +3,7 @@
 ## Linux — main installation
 
 ```bash
-make install
+bun run install:linux
 ```
 
 Builds the production binary (frontend embedded) and installs it as the user's
@@ -53,7 +53,7 @@ day that changes. What the extension did is written to
 `log()` does not reach `journalctl` on every host.
 
 ```bash
-make install-gnome-extension
+bun run install:gnome-extension
 ```
 
 The Shell imports an extension only when it starts, so **log out and back in**

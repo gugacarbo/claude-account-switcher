@@ -16,7 +16,7 @@ ${uiChanges}
 
 ## Tested on
 
-- [x] \`make check\` pass
+- [x] \`bun run validate\` pass
 `;
 
 const fullSection = `## UI changes

@@ -52,7 +52,8 @@ checking for and protecting local work. Choose one of:
   commit or PR description.
 - **Skipped change:** record the SHA and reason without applying it.
 
-Validate using `make check`, `make build`, and relevant platform/desktop tests
+Validate using `bun run validate`, `bun run build`, and relevant
+platform/desktop tests
 from [UI development](ui-development.md). Review the complete PR diff, including
 release URLs and removed presentation paths. Merge only after applicable CI and
 review gates pass; compilation is not native runtime acceptance.

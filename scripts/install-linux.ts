@@ -3,7 +3,7 @@
  * Install the switcher as the user's main Linux installation.
  *
  * Usage:
- *   bun scripts/install-linux.ts   (or: make install)
+ *   bun run install:linux
  *
  * Builds the production binary (frontend embedded) and installs it to
  * ~/.local/bin/claude-switcher, plus the app-menu launcher and icon. If the
@@ -12,7 +12,7 @@
  * autostart behind the user's back (the app's own toggle owns that choice).
  *
  * On GNOME Shell it also compares the installed tray extension with the one in
- * packaging/gnome-shell and reinstalls it (`make install-gnome-extension`)
+ * packaging/gnome-shell and reinstalls it (`bun run install:gnome-extension`)
  * when they differ. The shell only loads the new copy after logout/login.
  */
 
@@ -131,12 +131,12 @@ async function installGnomeExtension(
     console.log("install-linux: extensão GNOME já está atualizada");
     return false;
   }
-  const make = Bun.spawnSync(["make", "install-gnome-extension"], {
+  const pack = Bun.spawnSync(["bun", "run", "install:gnome-extension"], {
     cwd: root,
     stdout: "inherit",
     stderr: "inherit",
   });
-  if (make.exitCode !== 0) {
+  if (pack.exitCode !== 0) {
     console.error("install-linux: a extensão GNOME não foi instalada");
     return false;
   }

@@ -11,5 +11,12 @@
       "ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
     }
   },
-  "ignoreBinaries": ["go", "gofmt", "golangci-lint", "gitleaks", "govulncheck"]
+  "ignoreBinaries": [
+    "go",
+    "gofmt",
+    "golangci-lint",
+    "gitleaks",
+    "govulncheck",
+    "gnome-extensions"
+  ]
 }

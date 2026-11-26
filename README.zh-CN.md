@@ -4,7 +4,7 @@
 > 点击托盘图标打开账号面板；设置、阈值和继续聊天在独立窗口中显示。
 > 无法定位托盘时使用紧凑窗口。关闭窗口不会退出，只有“退出”会停止应用。
 > Linux 最低为 Ubuntu 24.04 / Debian 13，需要 `libgtk-4-1` 和
-> `libwebkitgtk-6.0-4`，不再使用 zenity/kdialog。开发使用 `make check` / `make build`；
+> `libwebkitgtk-6.0-4`，不再使用 zenity/kdialog。开发使用 `bun run validate` / `bun run build`；
 > 下方旧截图和旧版构建说明仅供历史参考，以 [新版开发说明](docs/ui-development.md) 为准。
 
 

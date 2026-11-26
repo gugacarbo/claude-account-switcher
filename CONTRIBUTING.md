@@ -26,8 +26,8 @@ not upstream, unless reporting a problem specifically in the original project.
 Go 1.26+ and Bun 1.4.3. See [UI development](docs/ui-development.md).
 
 ```bash
-make check
-make build
+bun run validate
+bun run build
 # With runtime GTK/WebKit installed, also validate the actual desktop-linked tests:
 go test -tags purego ./...
 ```

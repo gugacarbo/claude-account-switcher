@@ -279,8 +279,8 @@ Go 1.26+ and Bun 1.4.3 are required for development. The desktop UI uses
 **Wails 3.1 + Vite + React + TypeScript**. Bun is not needed by end users.
 
 ```bash
-make check
-make build
+bun run validate
+bun run build
 ```
 
 Equivalent explicit desktop build (after `cd frontend && bun install --frozen-lockfile && bun run build`):

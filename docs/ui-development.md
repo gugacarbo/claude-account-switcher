@@ -21,7 +21,7 @@ during an operation or update. Rows refresh with backend state, alongside Open
 and Quit. A host-drawn menu (Open and Quit only, no account rows) is built only
 when `SWITCHER_TRAY_MENU=native` is exported. On GNOME/Ubuntu the AppIndicator
 host sends `Activate` on a double click, so the dropdown needs the packaged
-GNOME extension (`make install-gnome-extension`) to open on a single or right
+GNOME extension (`bun run install:gnome-extension`) to open on a single or right
 click. That extension finds the icon by its StatusNotifierItem Id, which Wails
 fills from the tray label: the app sets `SetLabel(appName())` on Linux before
 `Run`, otherwise the Id stays "Wails" and the extension never matches.
@@ -34,17 +34,18 @@ The CLI `-status` path does not initialize Wails windows.
 ## Development
 
 ```sh
-make check
-make build
+bun run validate
+bun run build
 # Desktop-linked Go checks (Linux runtime libraries required):
 go vet -tags purego ./...
 go test -tags purego ./...
 ```
 
-For hot reload, run `bun run dev` in `frontend/`, then `make dev` in another
-terminal. The standalone Vite page intentionally reports an unavailable desktop
-connection: real commands require the Wails host. Browser tests pass a test-only
-Bridge to the actual App component; production has no sample-account mode.
+For hot reload, run `bun run dev`; it starts the Vite dev server and the desktop
+host together. The standalone Vite page intentionally reports an unavailable
+desktop connection: real commands require the Wails host. Browser tests pass a
+test-only Bridge to the actual App component; production has no sample-account
+mode.
 
 The purego build loads GTK4/WebKitGTK6 on Linux, Cocoa/WebKit on macOS and
 WebView2 on Windows. Linux minimum: Ubuntu 24.04 / Debian 13. Install

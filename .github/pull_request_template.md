@@ -50,5 +50,5 @@
 - [ ] Windows, Microsoft Store Claude
 - [ ] Windows, direct download Claude
 - [ ] macOS
-- [ ] `make check` and `make build` pass
+- [ ] `bun run validate` and `bun run build` pass
 - [ ] Relevant desktop/platform validation performed (describe results and limitations)
